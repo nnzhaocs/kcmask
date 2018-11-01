@@ -24,3 +24,6 @@ module_init(cache_insert_int_init);
 
 
 module_exit(cache_insert_int_exit);
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Nannan Zhao <znannan1@vt.edu>");
+MODULE_DESCRIPTION("cache support for CMASK");

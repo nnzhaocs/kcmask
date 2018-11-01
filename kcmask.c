@@ -71,12 +71,27 @@
 //#include <linux/proc_fs.h>
 //#include <asm/uaccess.h>
 //#include <linux/namei.h>
+
+#include <linux/init.h>
+//#include <linux/module.h>
+#include <linux/irq.h>
+//#include <linux/io.h>
+#include <linux/irqdomain.h>
+#include <linux/interrupt.h>
+//#include <linux/of.h>
+//#include <linux/of_address.h>
+
+#include <asm/exception.h>
+#include <asm/mach/irq.h>
+
 /*********************************
 * statistics
 **********************************/
 
 #define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 unsigned long *sys_call_table = (unsigned long *)0xffffffff818001c0;
+
+#define  IRQNO  251
 //#define __NR_cmask_insert_SPP_to_IAL 333
 
 extern int asm_call_interrupt(void);
@@ -985,6 +1000,41 @@ extern int asm_call_interrupt(void);
 ////	return ret;
 //}
 
+static irqreturn_t cacheInsert_InterruptHandler(int IRQ_Channel, void *DeviceIdentifier)
+{
+	printk("cmask_cache_insert: Interrupt should be handled there.\n");
+	return IRQ_HANDLED;
+}
+
+static int cache_insert_int_init(void)
+{
+    unsigned int irq;
+    unsigned int irqflags;
+    int ret;
+
+    irq=IRQNO;
+    irqflags=IRQF_NO_SUSPEND;
+    printk("cmask_cache_insert: start register it.\n");
+    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
+            irqflags, "cacheinsertint-int068", NULL);
+
+    if (ret!=0) {
+            printk(KERN_INFO "ERROR: Cannot request IRQ %d", irq);
+            printk(" - code %d , EIO %d , EINVAL %d\n", ret, EIO, EINVAL);
+    }
+
+    printk("CACHEINSERT_INIT\n");
+    return 0;
+}
+
+static void cache_insert_int_exit(void)
+{
+    unsigned int irq;
+    irq=IRQNO;
+    free_irq(irq, NULL);
+    printk("CACHEINSERT_EXIT\n");
+}
+
 /*********************************
 * frontswap hooks
 **********************************/
@@ -1339,6 +1389,8 @@ static int __init init_kcmask(void)
 //   /* unmap io memory */
 //    iounmap(virt_addr);
 
+	cache_insert_int_init();
+
 	pr_info("start register front swap ops\n");
 	frontswap_register_ops(&kcmask_frontswap_ops);
 //	if (kcmask_debugfs_init())
@@ -1353,15 +1405,17 @@ static int __init init_kcmask(void)
 //	return -ENOMEM;
 }
 
-/*static void __exit exit_kcmask(void)
+static void __exit exit_kcmask(void)
 {
 	pr_info("start unregister front swap ops\n");
+	cache_insert_int_exit();
 	return 0;
 }
-*/
+
 /* must be late so crypto has time to come up */
-late_initcall(init_kcmask);
-//module_exit(exit_kcmask);
+//late_initcall(init_kcmask);
+module_init(init_kcmask);
+module_exit(exit_kcmask);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nannan Zhao <znannan1@vt.edu>");

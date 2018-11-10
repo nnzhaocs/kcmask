@@ -67,7 +67,7 @@ static int __init init_dummy_irq_test(void)
     
 //    call_interrupt();
     {
-        __asm__ __volatile__ ("int $58");
+        __asm__ __volatile__ ("int $24");
     }
 
     return 0;

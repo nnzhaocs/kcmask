@@ -74,6 +74,7 @@ extern void invalidate_interrupt31(void);
 
 extern void irq_move_cleanup_interrupt(void);
 extern void reboot_interrupt(void);
+extern void acc_service_interrupt(void);
 extern void threshold_interrupt(void);
 extern void deferred_error_interrupt(void);
 
@@ -94,6 +95,7 @@ extern void trace_deferred_error_interrupt(void);
 extern void trace_call_function_interrupt(void);
 extern void trace_call_function_single_interrupt(void);
 #define trace_irq_move_cleanup_interrupt  irq_move_cleanup_interrupt
+#define trace_acc_service_interrupt  acc_service_interrupt
 #define trace_reboot_interrupt  reboot_interrupt
 #define trace_kvm_posted_intr_ipi kvm_posted_intr_ipi
 #define trace_kvm_posted_intr_wakeup_ipi kvm_posted_intr_wakeup_ipi
@@ -193,6 +195,7 @@ extern void smp_error_interrupt(struct pt_regs *);
 #ifdef CONFIG_X86_IO_APIC
 extern asmlinkage void smp_irq_move_cleanup_interrupt(void);
 #endif
+extern asmlinkage void smp_acc_service_interrupt(void);
 #ifdef CONFIG_SMP
 extern void smp_reschedule_interrupt(struct pt_regs *);
 extern void smp_call_function_interrupt(struct pt_regs *);

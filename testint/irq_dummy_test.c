@@ -57,25 +57,61 @@
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/interrupt.h>
+#include <linux/kthread.h>
+#include <linux/delay.h>
+
+static int test_thread(void *arg)
+{
+
+	set_user_nice(current, -20);
+	//set_current_state(TASK_INTERRUPTIBLE);
+	__set_current_state(TASK_RUNNING);
+	while (!kthread_should_stop()) {
+		schedule();
+		printk("sleep...");
+		msleep(5000);
+    {
+        __asm__ __volatile__ ("int $238");
+    }
+	//	__set_current_state(TASK_INTERRUPTIBLE);
+	}
+	__set_current_state(TASK_RUNNING);
+
+	return 0;
+}
 
 
 extern void call_interrupt(void);
 
+struct task_struct *thread = NULL;
 static int __init init_dummy_irq_test(void)
 {
     printk("initing test dummy irq.\n");
     
 //    call_interrupt();
-    {
-        __asm__ __volatile__ ("int $24");
-    }
+//    {
+//        __asm__ __volatile__ ("int $160");
+//    }
+//
+
+      thread = kthread_create_on_node(test_thread,
+			(void *)NULL, cpu_to_node(0),
+			"test_thread%d", 0);
+/* bind thread to the cpu */
+	if (likely(!IS_ERR(thread))) {
+		kthread_bind(thread, 1);
+		wake_up_process(thread);
+	}
 
     return 0;
 }
+
 static void __exit exit_dummy_irq_test(void)
 {
     printk("exit test dummy irq\n");
-    return ;
+    if (thread)
+	kthread_stop(thread); 
+   return ;
 }
 
 

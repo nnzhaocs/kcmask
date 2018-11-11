@@ -5,4 +5,4 @@ msg: .ascii "Hello World\n"
 .global call_interrupt
 
 call_interrupt:
-    int $24
+    int $59

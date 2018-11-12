@@ -1059,7 +1059,7 @@ apicinterrupt3 IRQ_MOVE_CLEANUP_VECTOR \
 apicinterrupt3 REBOOT_VECTOR \
 	reboot_interrupt smp_reboot_interrupt
 #endif
-
+//NANNAN: def interrupt in entry gate
 apicinterrupt3 ACC_SERVICE_VECTOR \
 	acc_service_interrupt smp_acc_service_interrupt
 #ifdef CONFIG_X86_UV

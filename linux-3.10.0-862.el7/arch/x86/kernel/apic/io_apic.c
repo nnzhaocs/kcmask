@@ -1330,10 +1330,11 @@ next:
 			   cpumask_intersects(cfg->old_domain, cpu_online_mask);
 		}
 		for_each_cpu_and(new_cpu, tmp_mask, cpu_online_mask)
-                {       
+                {   //NANNAN: print cpu, vector, and irq
 	                printk("Alloc cpu = %d,  vector %d, for irq %d\n", new_cpu, vector, irq);
 			per_cpu(vector_irq, new_cpu)[vector] = irq;
 		}
+				//NANNAN: store the vector
                 cfg->vector = vector;
 
 		cpumask_copy(cfg->domain, tmp_mask);
@@ -2303,13 +2304,17 @@ void send_cleanup_vector(struct irq_cfg *cfg)
 	cfg->move_in_progress = 0;
 }
 
+//NANNAN: define the acc interrupt handler
 asmlinkage void smp_acc_service_interrupt(void)
 {
 	irq_enter();
 	exit_idle();
-        printk("START ACC SERVICE.\n");
+    printk("START ACC SERVICE.\n");
 	irq_exit();
 }
+
+//
+
 asmlinkage void smp_irq_move_cleanup_interrupt(void)
 {
 	unsigned vector, me;

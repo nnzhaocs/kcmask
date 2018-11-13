@@ -2304,12 +2304,37 @@ void send_cleanup_vector(struct irq_cfg *cfg)
 	cfg->move_in_progress = 0;
 }
 
+//NANNAN: header file
+
+#include <linux/swap.h>
+#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+
 //NANNAN: define the acc interrupt handler
 asmlinkage void smp_acc_service_interrupt(void)
 {
 	irq_enter();
 	exit_idle();
     printk("START ACC SERVICE.\n");
+	struct writeback_control wbc = {
+		.sync_mode = WB_SYNC_NONE,
+	};
+	unsigned int dlen = PAGE_SIZE;
+
+//	u8 *reserved_memory, *src;
+//	pr_info("map reserved memory to this virtual memory space\n");
+//	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen);
+//
+//	src = kmap_atomic(page);
+//	pr_info("cp data to reserved memory\n");
+//	memcpy(reserved_memory, src, dlen);
+//	kunmap_atomic(src);
+//
+//	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
+
+	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
+	struct page *page = (struct page*) malloc(sizeof(struct page));
+	memcpy(page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page))
+    ret = __swap_writepage(page, wbc, end_swap_bio_write);
 	irq_exit();
 }
 

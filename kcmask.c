@@ -58,56 +58,56 @@
 #include <linux/irqdomain.h>
 #include <linux/interrupt.h>
 
-//#include <asm/exception.h>
-//#include <asm/mach/irq.h>
+#include <linux/kthread.h>
+#include <linux/delay.h>
 
 /*********************************
 * statistics
 **********************************/
 
 #define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
-unsigned long *sys_call_table = (unsigned long *)0xffffffff818001c0;
+//unsigned long *sys_call_table = (unsigned long *)0xffffffff818001c0;
 
-#define  IRQNO  60
+//#define  IRQNO  238
 
-extern int asm_call_interrupt(void);
+//extern int asm_call_interrupt(void);
+//
+//static irqreturn_t cacheInsert_InterruptHandler(int IRQ_Channel, void *DeviceIdentifier)
+//{
+//	printk("cmask_cache_insert: Interrupt should be handled there.\n");
+//	return IRQ_HANDLED;
+//}
 
-static irqreturn_t cacheInsert_InterruptHandler(int IRQ_Channel, void *DeviceIdentifier)
-{
-	printk("cmask_cache_insert: Interrupt should be handled there.\n");
-	return IRQ_HANDLED;
-}
+//static int cache_insert_int_init(void)
+//{
+//    unsigned int irq;
+//    unsigned int irqflags;
+//    int ret;
+//
+//    irq=IRQNO;
+//    irqflags=IRQF_NO_SUSPEND;
+//    printk("cmask_cache_insert: start register it.\n");
+//
+//    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
+//            irqflags, "cacheinsertINT", NULL);
+//
+//    if (ret!=0) {
+//            printk(KERN_INFO "ERROR: Cannot request IRQ %d", irq);
+//            printk(" - code %d , EIO %d , EINVAL %d\n", ret, EIO, EINVAL);
+//            return -1;
+//    }
+//
+//    printk("CACHEINSERT_INIT\n");
+//    return 0;
+//}
 
-static int cache_insert_int_init(void)
-{
-    unsigned int irq;
-    unsigned int irqflags;
-    int ret;
-
-    irq=IRQNO;
-    irqflags=IRQF_NO_SUSPEND;
-    printk("cmask_cache_insert: start register it.\n");
-
-    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
-            irqflags, "cacheinsertINT", NULL);
-
-    if (ret!=0) {
-            printk(KERN_INFO "ERROR: Cannot request IRQ %d", irq);
-            printk(" - code %d , EIO %d , EINVAL %d\n", ret, EIO, EINVAL);
-            return -1;
-    }
-
-    printk("CACHEINSERT_INIT\n");
-    return 0;
-}
-
-static void cache_insert_int_exit(void)
-{
-    unsigned int irq;
-    irq=IRQNO;
-    free_irq(irq, NULL);
-    printk("CACHEINSERT_EXIT\n");
-}
+//static void cache_insert_int_exit(void)
+//{
+//    unsigned int irq;
+//    irq=IRQNO;
+//    free_irq(irq, NULL);
+//    printk("CACHEINSERT_EXIT\n");
+//}
 
 /*********************************
 * frontswap hooks
@@ -122,7 +122,7 @@ static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 	pr_info("kcmask_frontswap_store!\n");
 	u8 *reserved_memory, *src;
 	pr_info("map reserved memory to this virtual memory space\n");
-	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen);
+	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
 
 	src = kmap_atomic(page);
 	pr_info("cp data to reserved memory\n");
@@ -130,10 +130,23 @@ static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 	kunmap_atomic(src);
 
 	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
+
+	memcpy(reserved_memory+dlen, sector, sizeof(sector_t));
+
+	memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page))
+
 	pr_info("sector: %ld\n", sector);
+//	kunmap_atomic(src);
 
 	pr_info("call asm interrupt to insert data to cache\n");
+
 	//asm_call_interrupt();
+
+    {
+        __asm__ __volatile__ ("int $238");
+    }
+
+
 	pr_info("finished interrupt handler\n");
 	return ret;
 }
@@ -174,50 +187,52 @@ static struct frontswap_ops kcmask_frontswap_ops = {
 	.invalidate_area = kcmask_frontswap_invalidate_area,
 	.init = kcmask_frontswap_init
 };
-int irq_req_ret = 0;
+//int irq_req_ret = 0;
 /*********************************
 * module init and exit
 **********************************/
 static int __init init_kcmask(void)
 {
 
-    int irq = 0;
-    unsigned int irqflags = 0;
-    int ret = 0;
-    irqflags= IRQF_SHARED ;
-
-    irq = irq_alloc_descs(-1, 0, 1, 0);
- 
-    printk("cmask_cache_insert: start register it. irqno = %d\n", irq);
-
-    if (irq < 0){
-        return -1;
-    }     
-
-    irq_set_chip_and_handler_name(irq, &dummy_irq_chip,
-				      handle_simple_irq, "kcmask");
-//    irq_set_chip_and_handler(&dummy_irq_chip, );
-  
-
-    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
-            irqflags, "cacheinsertINT", &irq_req_ret);
-    irq_req_ret = ret;
-    if(ret){
-      printk("can not req irq. ret is %d\n", ret);
-      return -1;
-    }
+//    int irq = 0;
+//    unsigned int irqflags = 0;
+//    int ret = 0;
+//    irqflags= IRQF_SHARED ;
+//
+//    irq = irq_alloc_descs(-1, 0, 1, 0);
+//
+//    printk("cmask_cache_insert: start register it. irqno = %d\n", irq);
+//
+//    if (irq < 0){
+//        return -1;
+//    }
+//
+//    irq_set_chip_and_handler_name(irq, &dummy_irq_chip,
+//				      handle_simple_irq, "kcmask");
+////    irq_set_chip_and_handler(&dummy_irq_chip, );
+//
+//
+//    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
+//            irqflags, "cacheinsertINT", &irq_req_ret);
+//    irq_req_ret = ret;
+//    if(ret){
+//      printk("can not req irq. ret is %d\n", ret);
+//      return -1;
+//    }
+	pr_info("start register front swap ops\n");
+	frontswap_register_ops(&kcmask_frontswap_ops);
     return 0;
 
 }
 
 static void __exit exit_kcmask(void)
 {
-	pr_info("start unregister front swap ops\n");
-        if (irq_req_ret == 0){
-	     cache_insert_int_exit();
-        }
+//	pr_info("start unregister front swap ops\n");
+//        if (irq_req_ret == 0){
+//	     cache_insert_int_exit();
+//        }
 	pr_info("start unregister front swap ops done\n");
-	return ;
+	return 0;
 }
 
 /* must be late so crypto has time to come up */

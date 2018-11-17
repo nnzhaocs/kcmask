@@ -2307,20 +2307,41 @@ void send_cleanup_vector(struct irq_cfg *cfg)
 //NANNAN: header file
 
 #include <linux/swap.h>
+#include <linux/writeback.h>
+#include <linux/slab.h>
+
 #define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+
+
+struct page swap_page;// = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
+struct writeback_control wbc = {
+	.sync_mode = WB_SYNC_NONE,
+};
+unsigned int dlen = PAGE_SIZE;
 
 //NANNAN: define the acc interrupt handler
 asmlinkage void smp_acc_service_interrupt(void)
 {
+	//irq_enter();
+	//exit_idle();
+    	//printk("START ACC SERVICE.\n");
+	//struct writeback_control wbc = {
+	//	.sync_mode = WB_SYNC_NONE,
+	//};
+	
+	u8 *reserved_memory;//, *src;
+        int ret;
+	sector_t sector;
+	
+	//struct page *swap_page = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
+        //struct writeback_control wbc = {
+        //         .sync_mode = WB_SYNC_NONE,
+        //};
+
 	irq_enter();
 	exit_idle();
-    printk("START ACC SERVICE.\n");
-	struct writeback_control wbc = {
-		.sync_mode = WB_SYNC_NONE,
-	};
-	unsigned int dlen = PAGE_SIZE;
+	printk("START ACC SERVICE.\n");
 
-//	u8 *reserved_memory, *src;
 //	pr_info("map reserved memory to this virtual memory space\n");
 //	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen);
 //
@@ -2332,9 +2353,18 @@ asmlinkage void smp_acc_service_interrupt(void)
 //	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
 
 	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-	struct page *page = (struct page*) malloc(sizeof(struct page));
-	memcpy(page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page))
-    ret = __swap_writepage(page, wbc, end_swap_bio_write);
+//	struct page *swap_page = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
+	//if (!swap_page){
+	//	printk("ERROR: CANNOT KMALLOC MEMORY!");
+	//}
+	
+        memcpy(&sector, reserved_memory+dlen, sizeof(sector_t));
+        printk("SECTOR: %lu", sector);
+
+	memcpy(&swap_page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page));
+	ret = __swap_writepage(&swap_page, &wbc, end_swap_bio_write);
+	printk("RET FROM SWAP WRITEPAGE: %d", ret);
+	//kfree(swap_page);
 	irq_exit();
 }
 

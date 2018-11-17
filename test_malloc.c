@@ -4,17 +4,17 @@
 #include <inttypes.h>
 //#include <GLFW/glfw3.h>
 
-#define ARRAY_NUM (1000000 * 1000 * 7LL) // GIG
+#define ARRAY_NUM (1000000 * 1000 * 2LL) // GIG
 int main(int argc, char *argv[]) {
 
 //    if(!glfwInit()) {
 //        exit(EXIT_FAILURE);
 //    }
-
+    uint64_t i = 0;
     uint64_t *array = malloc(sizeof(uint64_t) * ARRAY_NUM);
 
 //    double time_start = glfwGetTime();
-    for(uint64_t i = 0; i < ARRAY_NUM; ++i) {
+    for(i = 0; i < ARRAY_NUM; ++i) {
         *(array+i) = 0xff;
 	if ((i) %  (1024*1024*1024) == 0){
 	    printf("consume: %llu\n", i/1024/1024/1024);

@@ -117,10 +117,12 @@ static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 				struct page *page)
 {
 	int ret = 1;
+	u8 *reserved_memory, *src;
 	unsigned int dlen = PAGE_SIZE;
+	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
 
 	pr_info("kcmask_frontswap_store!\n");
-	u8 *reserved_memory, *src;
+	
 	pr_info("map reserved memory to this virtual memory space\n");
 	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
 
@@ -129,23 +131,18 @@ static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 	memcpy(reserved_memory, src, dlen);
 	kunmap_atomic(src);
 
-	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
-
-	memcpy(reserved_memory+dlen, sector, sizeof(sector_t));
-
-	memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page))
+	
+	memcpy(reserved_memory+dlen, &sector, sizeof(sector_t));
+	memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page));
 
 	pr_info("sector: %ld\n", sector);
-//	kunmap_atomic(src);
 
 	pr_info("call asm interrupt to insert data to cache\n");
-
 	//asm_call_interrupt();
 
-    {
-        __asm__ __volatile__ ("int $238");
-    }
-
+	{
+        	__asm__ __volatile__ ("int $238");
+    	}
 
 	pr_info("finished interrupt handler\n");
 	return ret;
@@ -232,7 +229,7 @@ static void __exit exit_kcmask(void)
 //	     cache_insert_int_exit();
 //        }
 	pr_info("start unregister front swap ops done\n");
-	return 0;
+	//return 0;
 }
 
 /* must be late so crypto has time to come up */

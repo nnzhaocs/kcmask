@@ -193,6 +193,7 @@ int swap_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
 	unsigned int dlen = PAGE_SIZE;
+	u8 *src;
 	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
 
 	if (try_to_free_swap(page)) {

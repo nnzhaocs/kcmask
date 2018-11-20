@@ -1330,11 +1330,10 @@ next:
 			   cpumask_intersects(cfg->old_domain, cpu_online_mask);
 		}
 		for_each_cpu_and(new_cpu, tmp_mask, cpu_online_mask)
-                {   //NANNAN: print cpu, vector, and irq
+                {       
 	                printk("Alloc cpu = %d,  vector %d, for irq %d\n", new_cpu, vector, irq);
 			per_cpu(vector_irq, new_cpu)[vector] = irq;
 		}
-				//NANNAN: store the vector
                 cfg->vector = vector;
 
 		cpumask_copy(cfg->domain, tmp_mask);
@@ -2308,67 +2307,43 @@ void send_cleanup_vector(struct irq_cfg *cfg)
 
 #include <linux/swap.h>
 #include <linux/writeback.h>
-#include <linux/slab.h>
+//#include <linux/slab.h>
 
-#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
-
+//#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 
 struct page swap_page;// = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
 struct writeback_control wbc = {
-	.sync_mode = WB_SYNC_NONE,
+        .sync_mode = WB_SYNC_NONE,
 };
 unsigned int dlen = PAGE_SIZE;
 
+extern u8 *reserved_memory;
 //NANNAN: define the acc interrupt handler
 asmlinkage void smp_acc_service_interrupt(void)
 {
-	//irq_enter();
-	//exit_idle();
-    	//printk("START ACC SERVICE.\n");
-	//struct writeback_control wbc = {
-	//	.sync_mode = WB_SYNC_NONE,
-	//};
-	
-	u8 *reserved_memory;//, *src;
+       //u8 *reserved_memory;//, *src;
         int ret;
-	sector_t sector;
+        sector_t sector;
 	
-	//struct page *swap_page = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
-        //struct writeback_control wbc = {
-        //         .sync_mode = WB_SYNC_NONE,
-        //};
+        printk("START ACC SERVICE.\n");
+
+	//reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
+
+        memcpy(&sector, reserved_memory+dlen, sizeof(sector_t));
+        //printk("SECTOR: %lu", sector);
+        //
+        memcpy(&swap_page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page));
+        //
+        //iounmap(reserved_memory);
 
 	irq_enter();
 	exit_idle();
-	printk("START ACC SERVICE.\n");
 
-//	pr_info("map reserved memory to this virtual memory space\n");
-//	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen);
-//
-//	src = kmap_atomic(page);
-//	pr_info("cp data to reserved memory\n");
-//	memcpy(reserved_memory, src, dlen);
-//	kunmap_atomic(src);
-//
-//	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
-
-	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-//	struct page *swap_page = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
-	//if (!swap_page){
-	//	printk("ERROR: CANNOT KMALLOC MEMORY!");
-	//}
-	
-        memcpy(&sector, reserved_memory+dlen, sizeof(sector_t));
-        printk("SECTOR: %lu", sector);
-
-	memcpy(&swap_page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page));
-	ret = __swap_writepage(&swap_page, &wbc, end_swap_bio_write);
-	printk("RET FROM SWAP WRITEPAGE: %d", ret);
-	//kfree(swap_page);
+        ret = __swap_writepage(&swap_page, &wbc, end_swap_bio_write);
+        printk("RET FROM SWAP WRITEPAGE: %d", ret);
+        
 	irq_exit();
 }
-
-//
 
 asmlinkage void smp_irq_move_cleanup_interrupt(void)
 {

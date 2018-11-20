@@ -60,7 +60,8 @@
 
 #include <linux/kthread.h>
 #include <linux/delay.h>
-
+#include <linux/acpi.h>
+#include <linux/swap.h>
 /*********************************
 * statistics
 **********************************/
@@ -113,18 +114,20 @@
 * frontswap hooks
 **********************************/
 
+//extern u8 *reserved_memory;
+
 static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 				struct page *page)
 {
 	int ret = 1;
-	u8 *reserved_memory, *src;
+	u8 *src;
 	unsigned int dlen = PAGE_SIZE;
 	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
 
 	pr_info("kcmask_frontswap_store!\n");
 	
 	pr_info("map reserved memory to this virtual memory space\n");
-	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
+	//reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
 
 	src = kmap_atomic(page);
 	pr_info("cp data to reserved memory\n");
@@ -143,6 +146,8 @@ static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 	{
         	__asm__ __volatile__ ("int $238");
     	}
+
+	//iounmap(reserved_memory);
 
 	pr_info("finished interrupt handler\n");
 	return ret;
@@ -169,6 +174,8 @@ static void kcmask_frontswap_invalidate_area(unsigned type)
 
 static void kcmask_frontswap_init(unsigned type)
 {
+	unsigned int dlen = PAGE_SIZE;
+	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
 	pr_info("init front swap: Doing nothing\n");
 }
 
@@ -218,7 +225,7 @@ static int __init init_kcmask(void)
 //    }
 	pr_info("start register front swap ops\n");
 	frontswap_register_ops(&kcmask_frontswap_ops);
-    return 0;
+        return 0;
 
 }
 
@@ -228,6 +235,7 @@ static void __exit exit_kcmask(void)
 //        if (irq_req_ret == 0){
 //	     cache_insert_int_exit();
 //        }
+        iounmap(reserved_memory);
 	pr_info("start unregister front swap ops done\n");
 	//return 0;
 }

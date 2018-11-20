@@ -184,21 +184,55 @@ bad_bmap:
  * We may have stale swap cache pages in memory: notice
  * them here and get rid of the unnecessary final write.
  */
+
+#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+u8 *reserved_memory = NULL;
+EXPORT_SYMBOL(reserved_memory);
+
 int swap_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
+	unsigned int dlen = PAGE_SIZE;
+	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
 
 	if (try_to_free_swap(page)) {
 		unlock_page(page);
 		goto out;
 	}
-	if (frontswap_store(page) == 0) {
-		set_page_writeback(page);
-		unlock_page(page);
-		end_page_writeback(page);
-		goto out;
-	}
-	ret = __swap_writepage(page, wbc, end_swap_bio_write);
+	//if (frontswap_store(page) == 0) {
+	//	set_page_writeback(page);
+	//	unlock_page(page);
+	//	end_page_writeback(page);
+	//	goto out;
+	//}
+	
+	//NANNAN: 
+        printk("kcmask_frontswap_store!\n");
+        
+        printk("map reserved memory to this virtual memory space\n");
+        reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
+        
+        src = kmap_atomic(page);
+        printk("cp data to reserved memory\n");
+        memcpy(reserved_memory, src, dlen);
+        kunmap_atomic(src);
+        
+                                        
+        memcpy(reserved_memory+dlen, &sector, sizeof(sector_t));
+        memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page));
+       
+        printk("sector: %ld\n", sector);
+        
+        printk("call asm interrupt to insert data to cache\n");
+        //asm_call_interrupt();
+        {
+              __asm__ __volatile__ ("int $238");
+        }
+        
+        //iounmap(reserved_memory);
+        printk("finished interrupt handler\n");
+        
+	//ret = __swap_writepage(page, wbc, end_swap_bio_write);
 out:
 	return ret;
 }

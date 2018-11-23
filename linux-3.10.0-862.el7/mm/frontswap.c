@@ -141,8 +141,8 @@ struct frontswap_ops *frontswap_register_ops(struct frontswap_ops *ops)
 EXPORT_SYMBOL(frontswap_register_ops);
 
 //#ifndef NANNAN_RESERVED_MEM_
-//u8 *reserved_memory;
-//EXPORT_SYMBOL(reserved_memory);
+u8 *reserved_memory = NULL;
+EXPORT_SYMBOL_GPL(reserved_memory);
 //#endif
 
 /*

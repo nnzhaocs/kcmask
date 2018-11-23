@@ -187,7 +187,8 @@ bad_bmap:
 
 //#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 //NANNAN: remove
-//EXPORT_SYMBOL(reserved_memory);
+//u8 *reserved_memory = NULL;
+//EXPORT_SYMBOL_GPL(reserved_memory);
 
 int swap_writepage(struct page *page, struct writeback_control *wbc)
 {

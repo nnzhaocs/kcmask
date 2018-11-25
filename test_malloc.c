@@ -4,7 +4,7 @@
 #include <inttypes.h>
 //#include <GLFW/glfw3.h>
 
-#define ARRAY_NUM (1000000 * 1000 * 2LL + 1000) // GIG
+#define ARRAY_NUM (1000000 * 256 * 2LL + 1000) // GIG
 int main(int argc, char *argv[]) {
 
 //    if(!glfwInit()) {

@@ -80,14 +80,41 @@ static int test_thread(void *arg)
 	return 0;
 }
 
-
+#include <linux/swap.h>
 extern void call_interrupt(void);
+#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+extern u8 *reserved_memory;
+//EXPORT_SYMBOL_GPL(reserved_memory);
+
+extern struct workqueue_struct *test_workqueue;
+//EXPORT_SYMBOL_GPL(test_workqueue);
+extern struct acc_work_struct test_work;
+//EXPORT_SYMBOL_GPU(test_work);
+extern void do_save_page(struct work_struct *p_work);
+//EXPORT_SYMBOL_GPL(do_save_page);
+
+
 
 struct task_struct *thread = NULL;
 static int __init init_dummy_irq_test(void)
 {
     printk("initing test dummy irq.\n");
+    test_workqueue = create_workqueue("test_work_queue");
+    if (NULL == test_workqueue){
+        printk("cannot create test work queue.\n");
+        return -1;
+    }
+    INIT_WORK(&(test_work.save_page), do_save_page);
+
+    printk("ioremap reserved mem.\n");
     
+    reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, 0x2000);
+        if (NULL == reserved_memory) {
+            printk("Get NULL piointerrr...\n");
+        }
+    reserved_memory[0] = 0xff;
+    printk("reserved_memory %lx = %d...\n", (long unsigned int) reserved_memory , reserved_memory[0]);
+    return 0;  
 //    call_interrupt();
 //    {
 //        __asm__ __volatile__ ("int $160");
@@ -108,7 +135,18 @@ static int __init init_dummy_irq_test(void)
 
 static void __exit exit_dummy_irq_test(void)
 {
-    printk("exit test dummy irq\n");
+    printk("exit test dummy irq %lx\n", (long unsigned int) reserved_memory);
+        if (NULL == reserved_memory) {
+            return;
+        }
+    if (test_workqueue){
+        destroy_workqueue(test_workqueue);
+    }
+    if (reserved_memory)
+        iounmap(reserved_memory);
+
+    return;
+
     if (thread)
 	kthread_stop(thread); 
    return ;

@@ -187,8 +187,8 @@ bad_bmap:
 
 #define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 u8 *reserved_memory = NULL;
-EXPORT_SYMBOL(reserved_memory);
-
+EXPORT_SYMBOL_GPL(reserved_memory);
+u8 mem_t[8192] = {0};
 int swap_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
@@ -208,32 +208,44 @@ int swap_writepage(struct page *page, struct writeback_control *wbc)
 	//}
 	
 	//NANNAN: 
-        printk("kcmask_frontswap_store!\n");
+        //printk("kcmask_frontswap_store!\n");
         
-        printk("map reserved memory to this virtual memory space\n");
-        reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-        
-        src = kmap_atomic(page);
-        printk("cp data to reserved memory\n");
-        memcpy(reserved_memory, src, dlen);
-        kunmap_atomic(src);
-        
-                                        
-        memcpy(reserved_memory+dlen, &sector, sizeof(sector_t));
-        memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page));
-       
-        printk("sector: %ld\n", sector);
-        
-        printk("call asm interrupt to insert data to cache\n");
-        //asm_call_interrupt();
-        {
-              __asm__ __volatile__ ("int $238");
+        //printk("map reserved memory to this virtual memory space\n");
+        //reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
+
+                           
+        printk("cp data to reserved memory, dest = %lx\n", (long unsigned int)reserved_memory);
+        src = (u8 *)kmap(page);
+
+        if (NULL == reserved_memory) {
+            printk("Get NULL pointerrr...\n");
+        memcpy(mem_t, src, PAGE_SIZE);
         }
+        else{
+        memcpy(reserved_memory, src, PAGE_SIZE);    
+        }
+        //memcpy(mem_t, src, PAGE_SIZE);
+        kunmap(page);
         
+        if (reserved_memory) 
+	{                               
+        	memcpy(reserved_memory+dlen, &sector, sizeof(sector_t));
+        	memcpy(reserved_memory+dlen+sizeof(sector_t), &page, sizeof(struct  page *));
+       
+        	printk("sector: %ld, page is %lx\n", sector, (long unsigned int)page);
+        
+        	printk("call asm interrupt to insert data to cache\n");
+         
+	//asm_call_interrupt();
+        	{
+             		 __asm__ __volatile__ ("int $238");
+        	}
+        }
         //iounmap(reserved_memory);
+        
         printk("finished interrupt handler\n");
         
-	//ret = __swap_writepage(page, wbc, end_swap_bio_write);
+//	ret = __swap_writepage(page, wbc, end_swap_bio_write);
 out:
 	return ret;
 }

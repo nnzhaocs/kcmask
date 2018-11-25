@@ -429,7 +429,13 @@ int add_swap_extent(struct swap_info_struct *sis, unsigned long start_page,
 int generic_swapfile_activate(struct swap_info_struct *, struct file *,
 		sector_t *);
 //NANNAN
-extern u8 *reserved_memory;
+
+#ifndef __NANNAN_RESERVED_MEM_
+#define __NANNAN_RESERVED_MEM_
+u8 *reserved_memory = NULL;
+#endif
+
+//extern u8 *reserved_memory;
 
 /* linux/mm/swap_state.c */
 extern struct backing_dev_info swap_backing_dev_info;

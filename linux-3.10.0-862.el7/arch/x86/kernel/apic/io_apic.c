@@ -2309,38 +2309,84 @@ void send_cleanup_vector(struct irq_cfg *cfg)
 #include <linux/writeback.h>
 //#include <linux/slab.h>
 
-//#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 
-struct page swap_page;// = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
+//struct page swap_page;// = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
 struct writeback_control wbc = {
         .sync_mode = WB_SYNC_NONE,
 };
 unsigned int dlen = PAGE_SIZE;
 
+/*
+struct acc_work_struct{
+    struct page * swap_page;
+    struct work_struct save_page;
+};
+*/
+struct acc_work_struct test_work;
+EXPORT_SYMBOL_GPL(test_work);
+struct workqueue_struct *test_workqueue = NULL;
+EXPORT_SYMBOL_GPL(test_workqueue);
+
+void do_save_page(struct work_struct *p_work)
+{
+    int ret = 0;
+    struct acc_work_struct * save_page_work = container_of(p_work, struct acc_work_struct, save_page);
+    
+    printk("ret = %d\n", ret);
+    printk("page addr is %lx\n", (long unsigned int)save_page_work->swap_page);
+    ret = __swap_writepage(save_page_work->swap_page, &wbc, end_swap_bio_write);
+
+    kfree(save_page_work);
+
+    return ;
+}
+EXPORT_SYMBOL_GPL(do_save_page);
+
 extern u8 *reserved_memory;
+
 //NANNAN: define the acc interrupt handler
 asmlinkage void smp_acc_service_interrupt(void)
 {
-       //u8 *reserved_memory;//, *src;
-        int ret;
+        //u8 *reserved_memory;//, *src;
+        //int ret;
         sector_t sector;
+	//struct page swap_page;
+        struct acc_work_struct * t_work;
+
 	
+	irq_enter();
+	exit_idle();
+
         printk("START ACC SERVICE.\n");
+        printk("Reserve memm is %lx.\n", (long unsigned int)reserved_memory);
 
 	//reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
 
         memcpy(&sector, reserved_memory+dlen, sizeof(sector_t));
-        //printk("SECTOR: %lu", sector);
+        printk("SECTOR: %ld\n", sector);
         //
-        memcpy(&swap_page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page));
-        //
+        //memcpy(&swap_page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page));
+        
         //iounmap(reserved_memory);
 
-	irq_enter();
-	exit_idle();
+	t_work = (struct acc_work_struct *) kmalloc(sizeof(struct acc_work_struct), GFP_ATOMIC);
 
-        ret = __swap_writepage(&swap_page, &wbc, end_swap_bio_write);
-        printk("RET FROM SWAP WRITEPAGE: %d", ret);
+	if (NULL == t_work){
+        	printk("can not create t_work:\n");
+		irq_exit();
+		return;
+	}else{
+		printk("t work is %lx\n", (long unsigned int)t_work);
+	}
+
+	INIT_WORK(&(t_work->save_page), do_save_page);	
+        memcpy(&(t_work->swap_page), reserved_memory+dlen+sizeof(sector_t), sizeof(struct  page *));
+
+        //ret = __swap_writepage(&swap_page, &wbc, end_swap_bio_write);
+        //printk("RET FROM SWAP WRITEPAGE: %d", ret);
+        queue_work(test_workqueue, &(t_work->save_page));
+        printk("RET FROM SWAP WRITEPAGE:\n");
         
 	irq_exit();
 }

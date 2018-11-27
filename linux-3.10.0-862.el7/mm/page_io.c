@@ -209,7 +209,7 @@ int swap_writepage(struct page *page, struct writeback_control *wbc)
 		end_page_writeback(page);
 
 		totalpages = atomic_read(&si->frontswap_pages);
-		if (0 >= totalpages) // NANNAN: meaning goto interrupt
+		if (0 < totalpages) // NANNAN: meaning goto interrupt
 			goto out;
 	}
 	

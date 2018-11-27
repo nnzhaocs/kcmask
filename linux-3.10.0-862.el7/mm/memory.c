@@ -3360,6 +3360,10 @@ static int wp_huge_pud(struct vm_fault *vmf, pud_t orig_pud)
  * but allow concurrent faults), and pte mapped but not yet locked.
  * We return with mmap_sem still held, but pte unmapped and unlocked.
  */
+
+//NAN
+extern u8 *reserved_memory;
+
 static int handle_pte_fault(struct vm_fault *vmf)
 {
 	struct vm_area_struct *vma = vmf->vma;

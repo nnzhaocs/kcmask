@@ -1103,6 +1103,10 @@ static inline bool smap_violation(int error_code, struct pt_regs *regs)
  * and the problem, and then passes it off to one of the appropriate
  * routines.
  */
+
+//NAN
+//extern u8 *reserved_memory;
+
 static void __kprobes
 __do_page_fault(struct pt_regs *regs, unsigned long error_code,
 		unsigned long address)

@@ -13,9 +13,19 @@ struct frontswap_ops {
 	void (*invalidate_area)(unsigned);
 };
 
+//NANNAN
+struct frontswap_kcmask_ops {
+	int (*store)(unsigned, pgoff_t, struct page *);
+};
+
 extern bool frontswap_enabled;
 extern struct frontswap_ops *
 	frontswap_register_ops(struct frontswap_ops *ops);
+
+//NANNAN
+extern struct frontswap_ops *
+	frontswap_register_ops(struct frontswap_ops *ops);
+
 extern void frontswap_shrink(unsigned long);
 extern unsigned long frontswap_curr_pages(void);
 extern void frontswap_writethrough(bool);

@@ -2303,57 +2303,58 @@ void send_cleanup_vector(struct irq_cfg *cfg)
 	cfg->move_in_progress = 0;
 }
 
-//NANNAN: header file
+////NANNAN: header file
+//
+//#include <linux/swap.h>
+//#include <linux/writeback.h>
+////#include <linux/slab.h>
+//
+//#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+//
+////struct page swap_page;// = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
+//struct writeback_control wbc = {
+//        .sync_mode = WB_SYNC_NONE,
+//};
+//unsigned int dlen = PAGE_SIZE;
 
-#include <linux/swap.h>
-#include <linux/writeback.h>
-//#include <linux/slab.h>
-
-#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
-
-//struct page swap_page;// = (struct page*) kmalloc(sizeof(struct page), GFP_KERNEL);
-struct writeback_control wbc = {
-        .sync_mode = WB_SYNC_NONE,
-};
-unsigned int dlen = PAGE_SIZE;
-
-/*
-struct acc_work_struct{
-    struct page * swap_page;
-    struct work_struct save_page;
-};
-*/
-struct acc_work_struct test_work;
-EXPORT_SYMBOL_GPL(test_work);
-struct workqueue_struct *test_workqueue = NULL;
-EXPORT_SYMBOL_GPL(test_workqueue);
-
-void do_save_page(struct work_struct *p_work)
-{
-    int ret = 0;
-    struct acc_work_struct * save_page_work = container_of(p_work, struct acc_work_struct, save_page);
-    
-    printk("ret = %d\n", ret);
-    printk("page addr is %lx\n", (long unsigned int)save_page_work->swap_page);
-    ret = __swap_writepage(save_page_work->swap_page, &wbc, end_swap_bio_write);
-
-    kfree(save_page_work);
-
-    return ;
-}
-EXPORT_SYMBOL_GPL(do_save_page);
+///*
+//struct acc_work_struct{
+//    struct page * swap_page;
+//    struct work_struct save_page;
+//};
+//*/
+//struct acc_work_struct test_work;
+//EXPORT_SYMBOL_GPL(test_work);
+//struct workqueue_struct *test_workqueue = NULL;
+//EXPORT_SYMBOL_GPL(test_workqueue);
+//
+//void do_save_page(struct work_struct *p_work)
+//{
+//    int ret = 0;
+//    struct acc_work_struct * save_page_work = container_of(p_work, struct acc_work_struct, save_page);
+//
+//    printk("ret = %d\n", ret);
+//    printk("page addr is %lx\n", (long unsigned int)save_page_work->swap_page);
+//    ret = __swap_writepage(save_page_work->swap_page, &wbc, end_swap_bio_write);
+//
+//    kfree(save_page_work);
+//
+//    return ;
+//}
+//EXPORT_SYMBOL_GPL(do_save_page);
 
 //extern u8 *reserved_memory;
 
 //NANNAN: define the acc interrupt handler
-//extern
+
+extern atomic_t modified_hw;
 
 asmlinkage void smp_acc_service_interrupt(void)
 {
 	irq_enter();
 	exit_idle();
 
-	inc_frontswap_succ_evicts(); //--
+	atomic_set(&modified_hw, 0);
     printk("START ACC SERVICE.\n");
 
 	irq_exit();

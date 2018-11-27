@@ -183,8 +183,25 @@ bad_bmap:
 //#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 u64 *reserved_memory = NULL;
 EXPORT_SYMBOL_GPL(reserved_memory);
+
+/* Reserved memory addressing
+ * --------------------------------------------------------------------------------------------
+ * We map the reserved memory physical address to a virtual address in KCMASK module initially.
+ * Always check if reserved_memory == NULL or not.
+ * If it's null, instead of throwing an error, we simply write/read the data into backend
+ * swap devices using normal swap_writepage_normal or swap_readpage_normal.
+ * */
+
 atomic_t modified_hw = ATOMIC_INIT(1);
 EXPORT_SYMBOL_GPL(modified_hw);
+
+/* Identify modified hardware or normal hardware by using a simple atomic variable
+ * ---------------------------------------------------------------------------------------------
+ * Use modified_hw to identify the hardware type: normal or modified.
+ * normal: running as norm hardware.
+ * modified: not executing the interrupt routine for 'int 238'.
+ * life becomes simple!
+ * */
 
 enum swap_rw_modified_ops {
 	SWAP_WRITEPAGE_TOBUFFER,
@@ -285,10 +302,11 @@ int swap_writepage(struct page *page, struct writeback_control *wbc)
 }
 
 /*
- * 1. kcmask module should be loaded from start. othrs, write/read from swap normally.
- * 2. or we can set amb_test.entry.flag in the interrupt handler?
- * 3. coordinate the emu swap_rw_modified_ops with hw's flag settings.
- * 4. we can make two reserved mems: one for write and another one for read.
+ * 1. kcmask module should be loaded at booting. Otherwise, write/read reqs goto swap devices as normal.
+ * 2. or can we set amb_test.entry.flag in the interrupt handler?
+ * TODO:
+ * 3. Coordinate the emu swap_rw_modified_ops flag with hardware's flag settings.
+ * 4. we could make two reserved mems: one for write and another one for read.
  * */
 
 static int swap_writepage_modified(struct page *page, struct writeback_control *wbc)

@@ -74,10 +74,12 @@ extern struct amb_area amb_test;
 extern enum swap_rw_modified_ops;
 extern u8 flag_handle;
 
-/* TODO:
- * init the flage to SWAP_WRITEPAGE_TOBUFFER
- *  kcmask should be load with mem/swap kernel modules
- *  remove unused header files.
+/*
+ * Initialize the flag to SWAP_WRITEPAGE_TOBUFFER. So we can write swap-out pages to buffer.
+ * TODO:
+ * kcmask should be load with mem/swap kernel modules at booting.
+ * Remove unused header files.
+ * Remove unused lines of code from the files in the project.
  * */
 
 /*********************************

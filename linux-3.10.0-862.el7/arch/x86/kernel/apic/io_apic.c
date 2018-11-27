@@ -2350,47 +2350,12 @@ EXPORT_SYMBOL_GPL(do_save_page);
 
 asmlinkage void smp_acc_service_interrupt(void)
 {
-	inc_frontswap_succ_evicts(); //--
-        //u8 *reserved_memory;//, *src;
-        //int ret;
-        sector_t sector;
-	//struct page swap_page;
-        struct acc_work_struct * t_work;
-
-	
 	irq_enter();
 	exit_idle();
 
-        printk("START ACC SERVICE.\n");
-        printk("Reserve memm is %lx.\n", (long unsigned int)reserved_memory);
+	inc_frontswap_succ_evicts(); //--
+    printk("START ACC SERVICE.\n");
 
-	//reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-
-        memcpy(&sector, reserved_memory+dlen, sizeof(sector_t));
-        printk("SECTOR: %ld\n", sector);
-        //
-        //memcpy(&swap_page, reserved_memory+dlen+sizeof(sector_t), sizeof(struct page));
-        
-        //iounmap(reserved_memory);
-
-	t_work = (struct acc_work_struct *) kmalloc(sizeof(struct acc_work_struct), GFP_ATOMIC);
-
-	if (NULL == t_work){
-        	printk("can not create t_work:\n");
-		irq_exit();
-		return;
-	}else{
-		printk("t work is %lx\n", (long unsigned int)t_work);
-	}
-
-	INIT_WORK(&(t_work->save_page), do_save_page);	
-        memcpy(&(t_work->swap_page), reserved_memory+dlen+sizeof(sector_t), sizeof(struct  page *));
-
-        //ret = __swap_writepage(&swap_page, &wbc, end_swap_bio_write);
-        //printk("RET FROM SWAP WRITEPAGE: %d", ret);
-        queue_work(test_workqueue, &(t_work->save_page));
-        printk("RET FROM SWAP WRITEPAGE:\n");
-        
 	irq_exit();
 }
 

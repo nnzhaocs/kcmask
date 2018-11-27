@@ -77,7 +77,7 @@ extern u8 *reserved_memory;
 static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
 				struct page *page)
 {
-	int ret = 1;
+	int ret = 0;
 	u8 *src;
 	unsigned int dlen = PAGE_SIZE;
 	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);

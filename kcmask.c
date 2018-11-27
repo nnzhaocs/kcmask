@@ -41,6 +41,7 @@
 #include <linux/swapops.h>
 #include <linux/writeback.h>
 #include <linux/pagemap.h>
+
 //NANNAN
 #include <linux/unistd.h>
 #include <linux/mm.h>
@@ -68,84 +69,16 @@
 
 #define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
 
-extern u8 *reserved_memory;
+extern u64 *reserved_memory;
+extern struct amb_area amb_test;
+extern enum swap_rw_modified_ops;
+extern u8 flag_handle;
 
-/*********************************
-* frontswap_kcmask_ops->store hooks
-**********************************/
-
-static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
-				struct page *page)
-{
-	int ret = 0;
-	u8 *src;
-	unsigned int dlen = PAGE_SIZE;
-	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
-
-	pr_info("kcmask_frontswap_store!\n");
-	
-	pr_info("map reserved memory to this virtual memory space\n");
-	//reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-
-	src = kmap_atomic(page);
-	pr_info("cp data to reserved memory\n");
-	memcpy(reserved_memory, src, dlen);
-	kunmap_atomic(src);
-
-	
-	memcpy(reserved_memory+dlen, &sector, sizeof(sector_t));
-
-	//memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page));
-
-	pr_info("sector: %ld\n", sector);
-
-	pr_info("call asm interrupt to insert data to cache\n");
-	//asm_call_interrupt();
-
-	{
-        	__asm__ __volatile__ ("int $238");
-    }
-
-	pr_info("finished interrupt handler\n");
-	return ret;
-}
-
-//static int kcmask_frontswap_load(unsigned type, pgoff_t offset,
-//				struct page *page)
-//{
-//
-//	return 0; //meaning that we can successfully read from frontswap and there is no need to read from swap device.
-//}
-//
-///* frees an entry in kcmask */
-//static void kcmask_frontswap_invalidate_page(unsigned type, pgoff_t offset)
-//{
-//	return;
-//}
-//
-///* frees all kcmask entries for the given swap type */
-//static void kcmask_frontswap_invalidate_area(unsigned type)
-//{
-//	return;
-//}
-
-//static void kcmask_frontswap_init(unsigned type)
-//{
-//
-//}
-
-/*********************************
- kcmask ops:
- Only store is implemented
-**********************************/
-
-static struct frontswap_ops kcmask_frontswap_ops = {
-	.store = kcmask_frontswap_store,
-	.load = NULL,
-	.invalidate_page = NULL,
-	.invalidate_area = NULL,
-	.init = NULL
-};
+/* TODO:
+ * init the flage to SWAP_WRITEPAGE_TOBUFFER
+ *  kcmask should be load with mem/swap kernel modules
+ *  remove unused header files.
+ * */
 
 /*********************************
 * module init and exit
@@ -153,9 +86,16 @@ static struct frontswap_ops kcmask_frontswap_ops = {
 static int __init init_kcmask(void)
 {
 	unsigned int dlen = PAGE_SIZE;
+	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
+
 	pr_info("start register front swap ops\n");
-	frontswap_register_ops(&kcmask_frontswap_ops);
+
 	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen*2);
+	spin_lock_init(&amb_test.lock);
+
+	amb_test.entry.flag = SWAP_WRITEPAGE_TOBUFFER; //write to buffer
+	memcpy(reserved_memory+flag_handle, &flag, flag_len);
+
     return 0;
 }
 
@@ -172,4 +112,4 @@ module_exit(exit_kcmask);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nannan Zhao <znannan1@vt.edu>");
-MODULE_DESCRIPTION("Kernel support for CMASK");
+MODULE_DESCRIPTION("Kernel support for Hardware compression");

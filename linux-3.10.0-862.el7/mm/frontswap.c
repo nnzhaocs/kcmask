@@ -208,8 +208,9 @@ bool __frontswap_test(struct swap_info_struct *sis,
 				pgoff_t offset)
 {
 	bool ret = false;
-
-	if (frontswap_ops && sis->frontswap_map)
+//NANNAN
+	//if (frontswap_ops && sis->frontswap_map)
+	if(frontswap_kcmask_ops->store && sis->frontswap_map)
 		ret = test_bit(offset, sis->frontswap_map);
 	return ret;
 }

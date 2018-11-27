@@ -2343,11 +2343,14 @@ void do_save_page(struct work_struct *p_work)
 }
 EXPORT_SYMBOL_GPL(do_save_page);
 
-extern u8 *reserved_memory;
+//extern u8 *reserved_memory;
 
 //NANNAN: define the acc interrupt handler
+//extern
+
 asmlinkage void smp_acc_service_interrupt(void)
 {
+	inc_frontswap_succ_evicts(); //--
         //u8 *reserved_memory;//, *src;
         //int ret;
         sector_t sector;

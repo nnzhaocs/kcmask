@@ -575,7 +575,7 @@ config KCMASK
 	depends on FRONTSWAP
 	default n
 	help
-		help.
+	  kcmask help.
 
 config ZPOOL
 	tristate "Common API for compressed memory storage"

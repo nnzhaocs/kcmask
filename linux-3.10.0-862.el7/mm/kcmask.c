@@ -41,6 +41,7 @@
 #include <linux/swapops.h>
 #include <linux/writeback.h>
 #include <linux/pagemap.h>
+
 //NANNAN
 #include <linux/unistd.h>
 #include <linux/mm.h>
@@ -67,177 +68,46 @@
 **********************************/
 
 #define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
-//unsigned long *sys_call_table = (unsigned long *)0xffffffff818001c0;
-
-//#define  IRQNO  238
-
-//extern int asm_call_interrupt(void);
-//
-//static irqreturn_t cacheInsert_InterruptHandler(int IRQ_Channel, void *DeviceIdentifier)
-//{
-//	printk("cmask_cache_insert: Interrupt should be handled there.\n");
-//	return IRQ_HANDLED;
-//}
-
-//static int cache_insert_int_init(void)
-//{
-//    unsigned int irq;
-//    unsigned int irqflags;
-//    int ret;
-//
-//    irq=IRQNO;
-//    irqflags=IRQF_NO_SUSPEND;
-//    printk("cmask_cache_insert: start register it.\n");
-//
-//    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
-//            irqflags, "cacheinsertINT", NULL);
-//
-//    if (ret!=0) {
-//            printk(KERN_INFO "ERROR: Cannot request IRQ %d", irq);
-//            printk(" - code %d , EIO %d , EINVAL %d\n", ret, EIO, EINVAL);
-//            return -1;
-//    }
-//
-//    printk("CACHEINSERT_INIT\n");
-//    return 0;
-//}
-
-//static void cache_insert_int_exit(void)
-//{
-//    unsigned int irq;
-//    irq=IRQNO;
-//    free_irq(irq, NULL);
-//    printk("CACHEINSERT_EXIT\n");
-//}
-
-/*********************************
-* frontswap hooks
-**********************************/
 
 extern u8 *reserved_memory;
+extern struct amb_area amb_test;
+//extern enum swap_rw_modified_ops;
+extern u8 flag_handle;
 
-static int kcmask_frontswap_store(unsigned type, pgoff_t offset,
-				struct page *page)
-{
-	int ret = 1;
-	u8 *src;
-	unsigned int dlen = PAGE_SIZE;
-	sector_t sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
+/*
+ * Initialize the flag to SWAP_WRITEPAGE_TOBUFFER. So we can write swap-out pages to buffer.
+ * TODO:
+ * kcmask should be load with mem/swap kernel modules at booting.
+ * Remove unused header files.
+ * Remove unused lines of code from the files in the project.
+ * */
 
-	pr_info("kcmask_frontswap_store!\n");
-	
-	pr_info("map reserved memory to this virtual memory space\n");
-	//reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-
-	src = kmap_atomic(page);
-	pr_info("cp data to reserved memory\n");
-	memcpy(reserved_memory, src, dlen);
-	kunmap_atomic(src);
-
-	
-	memcpy(reserved_memory+dlen, &sector, sizeof(sector_t));
-	memcpy(reserved_memory+dlen+sizeof(sector_t), page, sizeof(struct page));
-
-	pr_info("sector: %ld\n", sector);
-
-	pr_info("call asm interrupt to insert data to cache\n");
-	//asm_call_interrupt();
-
-	{
-        	__asm__ __volatile__ ("int $238");
-    	}
-
-	//iounmap(reserved_memory);
-
-	pr_info("finished interrupt handler\n");
-	return ret;
-}
-
-static int kcmask_frontswap_load(unsigned type, pgoff_t offset,
-				struct page *page)
-{
-
-	return 0; //meaning that we can successfully read from frontswap and there is no need to read from swap device.
-}
-
-/* frees an entry in kcmask */
-static void kcmask_frontswap_invalidate_page(unsigned type, pgoff_t offset)
-{
-	return;
-}
-
-/* frees all kcmask entries for the given swap type */
-static void kcmask_frontswap_invalidate_area(unsigned type)
-{
-	return;
-}
-
-static void kcmask_frontswap_init(unsigned type)
-{
-	unsigned int dlen = PAGE_SIZE;
-	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen+sizeof(sector_t)+sizeof(struct page));
-	pr_info("init front swap: Doing nothing\n");
-}
-
-/*********************************
- kcmask ops:
- Only store and load are implemented
-**********************************/
-
-static struct frontswap_ops kcmask_frontswap_ops = {
-	.store = kcmask_frontswap_store,
-	.load = kcmask_frontswap_load,
-	.invalidate_page = kcmask_frontswap_invalidate_page,
-	.invalidate_area = kcmask_frontswap_invalidate_area,
-	.init = kcmask_frontswap_init
-};
-//int irq_req_ret = 0;
 /*********************************
 * module init and exit
 **********************************/
+extern u8 flag_len;
+extern struct amb_area amb_test;
+
 static int __init init_kcmask(void)
 {
+	unsigned int dlen = PAGE_SIZE;
+	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
 
-//    int irq = 0;
-//    unsigned int irqflags = 0;
-//    int ret = 0;
-//    irqflags= IRQF_SHARED ;
-//
-//    irq = irq_alloc_descs(-1, 0, 1, 0);
-//
-//    printk("cmask_cache_insert: start register it. irqno = %d\n", irq);
-//
-//    if (irq < 0){
-//        return -1;
-//    }
-//
-//    irq_set_chip_and_handler_name(irq, &dummy_irq_chip,
-//				      handle_simple_irq, "kcmask");
-////    irq_set_chip_and_handler(&dummy_irq_chip, );
-//
-//
-//    ret = request_irq(irq, (irq_handler_t)cacheInsert_InterruptHandler,
-//            irqflags, "cacheinsertINT", &irq_req_ret);
-//    irq_req_ret = ret;
-//    if(ret){
-//      printk("can not req irq. ret is %d\n", ret);
-//      return -1;
-//    }
 	pr_info("start register front swap ops\n");
-	frontswap_register_ops(&kcmask_frontswap_ops);
-        return 0;
 
+	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen*2);
+	spin_lock_init(&amb_test.lock);
+
+	amb_test.entry.flag = SWAP_WRITEPAGE_TOBUFFER; //write to buffer
+	memcpy(reserved_memory+flag_handle, &flag, flag_len);
+
+    return 0;
 }
 
 static void __exit exit_kcmask(void)
 {
-//	pr_info("start unregister front swap ops\n");
-//        if (irq_req_ret == 0){
-//	     cache_insert_int_exit();
-//        }
-        iounmap(reserved_memory);
+    iounmap(reserved_memory);
 	pr_info("start unregister front swap ops done\n");
-	//return 0;
 }
 
 /* must be late so crypto has time to come up */
@@ -247,4 +117,4 @@ module_exit(exit_kcmask);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nannan Zhao <znannan1@vt.edu>");
-MODULE_DESCRIPTION("Kernel support for CMASK");
+MODULE_DESCRIPTION("Kernel support for Hardware compression");

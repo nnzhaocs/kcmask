@@ -216,12 +216,13 @@ EXPORT_SYMBOL_GPL(modified_hw);
  * modified: not executing the interrupt routine for 'int 238'.
  * life becomes simple!
  * */
-
+/*
 enum swap_rw_modified_ops {
 	SWAP_WRITEPAGE_TOBUFFER,
 	SWAP_WRITEPAGE_NORMAL,
 	SWAP_READPAGE_FROMBUFFER
 };
+*/
 
 //EXPORT_SYMBOL_GPL(swap_rw_modified_ops);
 
@@ -248,16 +249,16 @@ enum swap_rw_modified_ops {
  * ------------------------------------------------------------------------------------------------
  * */
 
-struct amb_entry {
-	pgoff_t offset;
-	enum swap_rw_modified_ops flag;
+//struct amb_entry {
+//	pgoff_t offset;
+//	enum swap_rw_modified_ops flag;
 	//u8 mem_test[4096];
-};
+//};
 //u8 mem_t[8192] = {0};
-struct amb_area {
-	struct amb_entry entry;
-	spinlock_t lock;
-};
+//struct amb_area {
+//	struct amb_entry entry;
+//	spinlock_t lock;
+//};
 
 struct amb_area amb_test;
 EXPORT_SYMBOL_GPL(amb_test);

@@ -433,6 +433,21 @@ struct acc_work_struct{
     struct page * swap_page;
     struct work_struct save_page;
 };
+enum swap_rw_modified_ops {
+        SWAP_WRITEPAGE_TOBUFFER,
+        SWAP_WRITEPAGE_NORMAL,
+        SWAP_READPAGE_FROMBUFFER
+};
+
+struct amb_entry {
+        pgoff_t offset;
+        enum swap_rw_modified_ops flag;
+        //u8 mem_test[4096];
+};
+struct amb_area {
+        struct amb_entry entry;
+        spinlock_t lock;
+};
 
 /* linux/mm/swap_state.c */
 extern struct backing_dev_info swap_backing_dev_info;

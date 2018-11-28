@@ -572,7 +572,6 @@ config ZSWAP
 
 config KCMASK
 	bool "Kernel support for KCMASK (EXPERIMENTAL)"
-	depends on FRONTSWAP
 	default n
 	help
 	  kcmask help.

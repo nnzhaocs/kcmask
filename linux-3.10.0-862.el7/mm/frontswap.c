@@ -26,10 +26,6 @@
  */
 static struct frontswap_ops *frontswap_ops __read_mostly;
 
-//NANNAN
-static struct frontswap_kcmask_ops *frontswap_kcmask_ops __read_mostly;
-static atomic_t frontswap_kcmask_stored_pages = ATOMIC_INIT(0); // NANNAN: NOTE init to 1;
-EXPORT_SYMBOL_GPL(frontswap_kcmask_stored_pages);
 /*
  * If enabled, frontswap_store will return failure even on success.  As
  * a result, the swap subsystem will always write the page to swap, in
@@ -71,13 +67,8 @@ static inline void inc_frontswap_invalidates(void) {
 	frontswap_invalidates++;
 }
 #else
-static inline void inc_frontswap_loads(void) {}
-
-static inline void inc_frontswap_succ_stores(void) { atomic_inc(&frontswap_kcmask_stored_pages); }
-static inline void inc_frontswap_succ_evicts(void) { atomic_dec(&frontswap_kcmask_stored_pages); }
-EXPORT_SYMBOL_GPL(inc_frontswap_succ_stores);
-EXPORT_SYMBOL_GPL(inc_frontswap_succ_evicts);
-
+static inline void inc_frontswap_loads(void) { }
+static inline void inc_frontswap_succ_stores(void) { }
 static inline void inc_frontswap_failed_stores(void) { }
 static inline void inc_frontswap_invalidates(void) { }
 #endif
@@ -144,16 +135,10 @@ struct frontswap_ops *frontswap_register_ops(struct frontswap_ops *ops)
 	 * the barrier to make sure compiler does not re-order us.
 	 */
 	barrier();
-	//NANNAN: just register the store;
-	//frontswap_ops = ops;
-	frontswap_kcmask_ops->store = ops->store;
+	frontswap_ops = ops;
 	return old;
 }
 EXPORT_SYMBOL(frontswap_register_ops);
-
-//NANNAN
-u8 *reserved_memory = NULL;
-EXPORT_SYMBOL_GPL(reserved_memory);
 
 /*
  * Enable/disable frontswap writethrough (see above).
@@ -195,8 +180,7 @@ void __frontswap_init(unsigned type, unsigned long *map)
 	 */
 	frontswap_map_set(sis, map);
 	if (frontswap_ops)
-		//NANNAN:
-		//frontswap_ops->init(type);
+		frontswap_ops->init(type);
 	else {
 		BUG_ON(type > MAX_SWAPFILES);
 		set_bit(type, need_init);
@@ -208,9 +192,8 @@ bool __frontswap_test(struct swap_info_struct *sis,
 				pgoff_t offset)
 {
 	bool ret = false;
-//NANNAN
-	//if (frontswap_ops && sis->frontswap_map)
-	if(frontswap_kcmask_ops->store && sis->frontswap_map)
+
+	if (frontswap_ops && sis->frontswap_map)
 		ret = test_bit(offset, sis->frontswap_map);
 	return ret;
 }
@@ -242,24 +225,19 @@ int __frontswap_store(struct page *page)
 	 * Return if no backend registed.
 	 * Don't need to inc frontswap_failed_stores here.
 	 */
-	//NANNAN
-	//if (!frontswap_ops)
-	if(!(frontswap_kcmask_ops->store))
+	if (!frontswap_ops)
 		return ret;
 
 	BUG_ON(!PageLocked(page));
 	BUG_ON(sis == NULL);
 	if (__frontswap_test(sis, offset))
 		dup = 1;
-
-	//NANNAN
-	//ret = frontswap_ops->store(type, offset, page);
-	ret = frontswap_kcmask_ops->store(type, offset, page);
+	ret = frontswap_ops->store(type, offset, page);
 	if (ret == 0) {
 		set_bit(offset, sis->frontswap_map);
 		inc_frontswap_succ_stores();
 		if (!dup)
-			atomic_inc(&sis->frontswap_pages); //change this one;
+			atomic_inc(&sis->frontswap_pages);
 	} else {
 		/*
 		  failed dup always results in automatic invalidate of
@@ -470,13 +448,6 @@ static int __init init_frontswap(void)
 				&frontswap_failed_stores);
 	debugfs_create_u64("invalidates", S_IRUGO,
 				root, &frontswap_invalidates);
-
-	//NANNAN
-	static struct frontswap_ops old_ops = {
-		.store = NULL
-	};
-
-	frontswap_kcmask_ops = old_ops;
 #endif
 	return 0;
 }

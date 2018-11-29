@@ -235,17 +235,19 @@ enum swap_rw_modified_ops {
  * can only hold one pagedata) instead of backend swap devices.
  * The hardware will read data from reserved mem and store it in our secret compression area.
  *-----------------------------------------------------------------------------------------------
- * SWAP_WRITEPAGE_NORMAL
+ * SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL
  * Hardware sets flag area in the reserved mem to SWAP_WRITEPAGE_NORMAL, meaning that our secret
  * compression area is full so we need to do real swap-out (i.e., writing pagedata to backend swap
  * devices) to free some space in our secret compression area.
  * We have to change flag to our default flag (SWAP_WRITEPAGE_TOBUFFER) after we are done.
+ * swap_writepage_modified will do swap_writepage_normal if this flag is encountered.
  * -----------------------------------------------------------------------------------------------
  * SWAP_READPAGE_FROMBUFFER
  * Hardware sets flag area in the reserved mem to SWAP_READPAGE_FROMBUFFER, meaning that the page
  * that caused page fault is in our secret compression area and this page is stored in the reserved
  * mem by hardware. Instead of reading from swap device, we read from the reserved mem.
  * We have to change flag to our default flag (SWAP_WRITEPAGE_TOBUFFER) after we are done.
+ * swap_writepage_modified will do swap_writepage_normal if this flag is encountered.
  * ------------------------------------------------------------------------------------------------
  * */
 

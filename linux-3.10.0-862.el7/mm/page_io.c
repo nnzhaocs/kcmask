@@ -332,8 +332,8 @@ out:
 static int swap_writepage_modified(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
-	unsigned long *dst;
-	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
+	//unsigned long *dst;
+	//enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
 
 	printk("Modified_HW: amb_memory_address dest = %lx\n", (long unsigned int)reserved_memory);
 

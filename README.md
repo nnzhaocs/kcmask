@@ -15,3 +15,4 @@
 
 vi /etc/default/grub and look at the last line.
 
+## Remeber to remove printk when you finish debugging

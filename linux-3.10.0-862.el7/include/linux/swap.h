@@ -435,7 +435,7 @@ struct acc_work_struct{
 };
 enum swap_rw_modified_ops {
         SWAP_WRITEPAGE_TOBUFFER,
-        SWAP_WRITEPAGE_NORMAL,
+        SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL,
         SWAP_READPAGE_FROMBUFFER
 };
 

@@ -2354,8 +2354,8 @@ asmlinkage void smp_acc_service_interrupt(void)
 	irq_enter();
 	exit_idle();
 
-	//atomic_set(&modified_hw, 0);
-    	printk("START ACC SERVICE. THIS IS TESTING THE MODIFIED HARDWARE!\n");
+	atomic_set(&modified_hw, 0);
+    printk("START ACC SERVICE. THIS IS TESTING THE MODIFIED AND TRADTIONAL HARDWARE!\n");
 
 	irq_exit();
 }

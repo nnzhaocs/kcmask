@@ -332,6 +332,7 @@ out:
 static int swap_writepage_modified(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
+	unsigned long *dst;
 	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
 
 	printk("Modified_HW: amb_memory_address dest = %lx\n", (long unsigned int)reserved_memory);
@@ -347,22 +348,32 @@ static int swap_writepage_modified(struct page *page, struct writeback_control *
 		printk("SWAP_WRITEPAGE_TOBUFFER");
 		return swap_writepage_tobuffer(page);
 	}
-	else if (amb_test.entry.flag == SWAP_WRITEPAGE_NORMAL){
+	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL){
 		// write to swap
-		printk("SWAP_WRITEPAGE_NORMAL, it should not happen???");
+		printk("SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL, skip AMB???");
+		// here we skip the buffer and write to swap ====????
+////		spin_lock(&amb_test.lock);
+////		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+////		spin_unlock(&amb_test.lock);
+//		dst = kmap_atomic(page);
+//		spin_lock(&amb_test.lock);
+//		//dst, src, size
+//		memcpy(dst, reserved_memory+pagedata_handle, pagedata_len);
+//		//reset flag to writebuffer;
+//		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+//
+//		spin_unlock(&amb_test.lock);
+//		kunmap_atomic(dst);
 
-		spin_lock(&amb_test.lock);
-		memcpy(reserved_memory+flag_handle, &flag, flag_len);
-		spin_unlock(&amb_test.lock);
 		goto out;
 	}
 	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER){
-		printk("SWAP_READPAGE_FROMBUFFER, it should not happen!");
-		spin_lock(&amb_test.lock);
-		memcpy(reserved_memory+flag_handle, &flag, flag_len);
-		spin_unlock(&amb_test.lock);
+		printk("SWAP_READPAGE_FROMBUFFER, skip AMB!");
+//		spin_lock(&amb_test.lock);
+//		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+//		spin_unlock(&amb_test.lock);
 
-		ret = -1;
+//		ret = -1;
 		goto out;
 		//return swap_readpage_frombuffer(page);
 	}
@@ -518,6 +529,7 @@ int swap_readpage(struct page *page)
 static int swap_readpage_modified(struct page *page)
 {
 	int ret = 0;
+	unsigned long *dst;
 	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
 
 	printk("Modified_HW: amb_memory_address dest = %lx\n", (long unsigned int)reserved_memory);
@@ -534,17 +546,26 @@ static int swap_readpage_modified(struct page *page)
 		printk("SWAP_WRITEPAGE_TOBUFFER, it should not happen!");
 		goto out; //swap_writepage_tobuffer(struct page *page);
 	}
-	else if (amb_test.entry.flag == SWAP_WRITEPAGE_NORMAL){
+	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL){
 		struct writeback_control wbc = {
 		        .sync_mode = WB_SYNC_NONE,
 		};
 		// write to swap
-		printk("SWAP_WRITEPAGE_NORMAL, mean compressed mem is full");
+		printk("SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL, mean compressed mem is full");
 
 		//reset flag
+//		spin_lock(&amb_test.lock);
+//		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+//		spin_unlock(&amb_test.lock);
+		dst = kmap_atomic(page);
 		spin_lock(&amb_test.lock);
+		//dst, src, size
+		memcpy(dst, reserved_memory+pagedata_handle, pagedata_len);
+		//reset flag to writebuffer;
 		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+
 		spin_unlock(&amb_test.lock);
+		kunmap_atomic(dst);
 
 		return swap_writepage_normal(page, &wbc);
 	}

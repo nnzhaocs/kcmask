@@ -5,7 +5,7 @@
 
 `make -j4` //if you have 4 cpus
 
-`make -j4` modules
+`make -j4 modules`
 
 `make install`
 

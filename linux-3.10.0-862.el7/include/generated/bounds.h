@@ -10,7 +10,7 @@
 #define NR_PAGEFLAGS 25 /* __NR_PAGEFLAGS	# */
 #define MAX_NR_ZONES 4 /* __MAX_NR_ZONES	# */
 #define NR_PCG_FLAGS 3 /* __NR_PCG_FLAGS	# */
-#define NR_CPUS_BITS 12 /* ilog2(CONFIG_NR_CPUS)	# */
+#define NR_CPUS_BITS 9 /* ilog2(CONFIG_NR_CPUS)	# */
 #define BLOATED_SPINLOCKS 0 /* sizeof(spinlock_t) > sizeof(int)	# */
 
 #endif

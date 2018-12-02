@@ -56,8 +56,8 @@
 #define TSS_stack 8336 /* offsetof(struct tss_struct, stack)	# */
 #define TSS_stack_size 512 /* sizeof(init_tss.stack)	# */
 
-#define __NR_syscall_max 331 /* sizeof(syscalls_64) - 1	# */
-#define NR_syscalls 332 /* sizeof(syscalls_64)	# */
+#define __NR_syscall_max 542 /* sizeof(syscalls_64) - 1	# */
+#define NR_syscalls 543 /* sizeof(syscalls_64)	# */
 #define __NR_ia32_syscall_max 382 /* sizeof(syscalls_ia32) - 1	# */
 #define IA32_NR_syscalls 383 /* sizeof(syscalls_ia32)	# */
 

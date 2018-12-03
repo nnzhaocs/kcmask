@@ -1,0 +1,14 @@
+Package: linux-headers-4.4.1012-2
+Source: linux-4.4.1012-2
+Version: 4.4.1012-2-1
+Architecture: amd64
+Maintainer: Anonymous <root@tna>
+Installed-Size: 47682
+Provides: linux-headers, linux-headers-2.6
+Section: kernel
+Priority: optional
+Homepage: http://www.kernel.org/
+Description: Linux kernel headers for 4.4.1012-2 on amd64
+ This package provides kernel header files for 4.4.1012-2 on amd64
+ .
+ This is useful for people who need to build external modules

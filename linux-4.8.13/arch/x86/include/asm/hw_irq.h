@@ -42,8 +42,11 @@ extern asmlinkage void reboot_interrupt(void);
 extern asmlinkage void threshold_interrupt(void);
 extern asmlinkage void deferred_error_interrupt(void);
 
+extern asmlinkage void acc_service_interrupt(void);
 extern asmlinkage void call_function_interrupt(void);
 extern asmlinkage void call_function_single_interrupt(void);
+
+#define trace_acc_service_interrupt  acc_service_interrupt
 
 #ifdef CONFIG_TRACING
 /* Interrupt handlers registered during init_IRQ */
@@ -63,6 +66,9 @@ extern void trace_call_function_single_interrupt(void);
 #define trace_kvm_posted_intr_ipi kvm_posted_intr_ipi
 #define trace_kvm_posted_intr_wakeup_ipi kvm_posted_intr_wakeup_ipi
 #endif /* CONFIG_TRACING */
+
+
+
 
 #ifdef	CONFIG_X86_LOCAL_APIC
 struct irq_data;

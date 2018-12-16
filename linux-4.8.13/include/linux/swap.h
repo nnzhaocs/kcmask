@@ -360,6 +360,26 @@ int add_swap_extent(struct swap_info_struct *sis, unsigned long start_page,
 		unsigned long nr_pages, sector_t start_block);
 int generic_swapfile_activate(struct swap_info_struct *, struct file *,
 		sector_t *);
+extern u8 *reserved_memory;
+struct acc_work_struct{
+    struct page * swap_page;
+    struct work_struct save_page;
+};
+enum swap_rw_modified_ops {
+        SWAP_WRITEPAGE_TOBUFFER,
+        SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL,
+        SWAP_READPAGE_FROMBUFFER
+};
+
+struct amb_entry {
+        pgoff_t offset;
+        enum swap_rw_modified_ops flag;
+        //u8 mem_test[4096];
+};
+struct amb_area {
+        struct amb_entry entry;
+        spinlock_t lock;
+};
 
 /* linux/mm/swap_state.c */
 extern struct address_space swapper_spaces[];

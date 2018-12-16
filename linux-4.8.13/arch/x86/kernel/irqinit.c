@@ -134,7 +134,7 @@ static void __init apic_intr_init(void)
 #ifdef CONFIG_X86_MCE_THRESHOLD
 	alloc_intr_gate(THRESHOLD_APIC_VECTOR, threshold_interrupt);
 #endif
-
+	alloc_intr_gate(ACC_SERVICE_VECTOR, acc_service_interrupt);
 #ifdef CONFIG_X86_MCE_AMD
 	alloc_intr_gate(DEFERRED_ERROR_VECTOR, deferred_error_interrupt);
 #endif

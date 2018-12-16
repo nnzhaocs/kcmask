@@ -106,6 +106,7 @@
  * sources per level' errata.
  */
 #define LOCAL_TIMER_VECTOR		0xef
+#define ACC_SERVICE_VECTOR		0xee
 
 #define NR_VECTORS			 256
 

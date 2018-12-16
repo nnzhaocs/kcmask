@@ -576,6 +576,12 @@ config ZSWAP
 	  they have not be fully explored on the large set of potential
 	  configurations and workloads that exist.
 
+config KCMASK
+	bool "Kernel support for KCMASK (EXPERIMENTAL)"
+	default n
+	help
+	  kcmask help.
+
 config ZPOOL
 	tristate "Common API for compressed memory storage"
 	default n

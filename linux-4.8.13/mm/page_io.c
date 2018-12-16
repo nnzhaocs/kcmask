@@ -23,7 +23,21 @@
 #include <linux/blkdev.h>
 #include <linux/uio.h>
 #include <asm/pgtable.h>
+static int swap_writepage_modified(struct page *page, struct writeback_control *wbc);
+static int swap_writepage_tobuffer(struct page *page);
+static int swap_readpage_modified(struct page *page);
+static int swap_readpage_frombuffer(struct page *page);
+static int swap_readpage_normal(struct page *page);
+static int swap_writepage_normal(struct page *page, struct writeback_control *wbc);
+static void get_flag_amb_entry(void);
 
+void __inline__ asm_call_interrupt(void)
+{
+	{
+		 __asm__ __volatile__ ("int $238");
+	}
+	return ;
+}
 static struct bio *get_swap_bio(gfp_t gfp_flags,
 				struct page *page, bio_end_io_t end_io)
 {
@@ -229,10 +243,105 @@ bad_bmap:
 	goto out;
 }
 
+//#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+u8 *reserved_memory = NULL;
+EXPORT_SYMBOL_GPL(reserved_memory);
+
+/* Reserved memory addressing
+ * --------------------------------------------------------------------------------------------
+ * We map the reserved memory physical address to a virtual address in KCMASK module initially.
+ * Always check if reserved_memory == NULL or not.
+ * If it's null, instead of throwing an error, we simply write/read the data into backend
+ * swap devices using normal swap_writepage_normal or swap_readpage_normal.
+ * */
+
+atomic_t modified_hw = ATOMIC_INIT(1);
+EXPORT_SYMBOL_GPL(modified_hw);
+
+/* Identify modified hardware or normal hardware by using a simple atomic variable
+ * ---------------------------------------------------------------------------------------------
+ * Use modified_hw to identify the hardware type: normal or modified.
+ * normal: running as norm hardware.
+ * modified: not executing the interrupt routine for 'int 238'.
+ * life becomes simple!
+ * */
 /*
- * We may have stale swap cache pages in memory: notice
- * them here and get rid of the unnecessary final write.
+enum swap_rw_modified_ops {
+	SWAP_WRITEPAGE_TOBUFFER,
+	SWAP_WRITEPAGE_NORMAL,
+	SWAP_READPAGE_FROMBUFFER
+};
+*/
+
+//EXPORT_SYMBOL_GPL(swap_rw_modified_ops);
+
+/* Three major operations: write to buffer, write to swap device, and read from buffer.
+ * Here buffer is reserved mem.
+ * ---------------------------------------------------------------------------------------------
+ * SWAP_WRITEPAGE_TOBUFFER
+ * Initially, we set the flag area in the reserved mem to SWAP_WRITEPAGE_TOBUFFER, meaning that
+ * the all swap-out pages are writting to the reserved mem sequentially (since our reserve mem
+ * can only hold one pagedata) instead of backend swap devices.
+ * The hardware will read data from reserved mem and store it in our secret compression area.
+ *-----------------------------------------------------------------------------------------------
+ * SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL
+ * Hardware sets flag area in the reserved mem to SWAP_WRITEPAGE_NORMAL, meaning that our secret
+ * compression area is full so we need to do real swap-out (i.e., writing pagedata to backend swap
+ * devices) to free some space in our secret compression area.
+ * We have to change flag to our default flag (SWAP_WRITEPAGE_TOBUFFER) after we are done.
+ * swap_writepage_modified will do swap_writepage_normal if this flag is encountered.
+ * -----------------------------------------------------------------------------------------------
+ * SWAP_READPAGE_FROMBUFFER
+ * Hardware sets flag area in the reserved mem to SWAP_READPAGE_FROMBUFFER, meaning that the page
+ * that caused page fault is in our secret compression area and this page is stored in the reserved
+ * mem by hardware. Instead of reading from swap device, we read from the reserved mem.
+ * We have to change flag to our default flag (SWAP_WRITEPAGE_TOBUFFER) after we are done.
+ * swap_writepage_modified will do swap_writepage_normal if this flag is encountered.
+ * ------------------------------------------------------------------------------------------------
+ * */
+
+//struct amb_entry {
+//	pgoff_t offset;
+//	enum swap_rw_modified_ops flag;
+	//u8 mem_test[4096];
+//};
+//u8 mem_t[8192] = {0};
+//struct amb_area {
+//	struct amb_entry entry;
+//	spinlock_t lock;
+//};
+
+struct amb_area amb_test;
+EXPORT_SYMBOL_GPL(amb_test);
+
+u8 flag_handle = 0; //1KB
+u8 v_address_handle = 1; //8KB unsigned long
+//u8 v_address_handle = 1 + flag_handle; //8KB unsigned long
+//u8 sector_address_handle = 8 + v_address_handle; // u64
+u8 sector_address_handle = 9; // u64
+//u8 pagedata_handle = 8 + sector_address_handle; //4 kb
+u8 pagedata_handle = 17; //4 kb
+
+EXPORT_SYMBOL_GPL(flag_handle);
+
+u8 flag_len = 1;
+u8 v_address_len = 8;
+u8 sector_address_len = 8;
+u16 pagedata_len = 4096;
+
+/*  reserved memory stack
+ * 					       	offset (B):
+ * |--------------------|		0
+ * |       flag (1B)    |
+ * |--------------------|		1
+ * |virtual address (8B)|
+ * |--------------------|		9
+ * | swap address (8B)  |
+ * |--------------------|		17
+ * |   pagedata (4KB)   |
+ * |--------------------|		4017
  */
+
 int swap_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int ret = 0;
@@ -241,16 +350,143 @@ int swap_writepage(struct page *page, struct writeback_control *wbc)
 		unlock_page(page);
 		goto out;
 	}
+
 	if (frontswap_store(page) == 0) {
 		set_page_writeback(page);
 		unlock_page(page);
 		end_page_writeback(page);
 		goto out;
 	}
-	ret = __swap_writepage(page, wbc, end_swap_bio_write);
+
+	printk("call asm interrupt to identify HW\n");
+	asm_call_interrupt();
+	printk("finished interrupt handler\n");
+
+	if (atomic_read(&modified_hw) == 0){
+		//traditional operations
+		return swap_writepage_normal(page, wbc);
+	}
+	//write to buffer or to swap device
+	return swap_writepage_modified(page, wbc);
 out:
 	return ret;
 }
+
+/*
+ * 1. kcmask module should be loaded at booting. Otherwise, write/read reqs goto swap devices as normal.
+ * 2. or can we set amb_test.entry.flag in the interrupt handler?
+ * TODO:
+ * 3. Coordinate the emu swap_rw_modified_ops flag with hardware's flag settings.
+ * 4. we could make two reserved mems: one for write and another one for read.
+ * */
+
+static int swap_writepage_modified(struct page *page, struct writeback_control *wbc)
+{
+	int ret = 0;
+	//unsigned long *dst;
+	//enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
+
+	printk("Modified_HW: amb_memory_address dest = %lx\n", (long unsigned int)reserved_memory);
+
+	if (NULL == reserved_memory) {
+		printk("Get NULL pointer Err...\n");
+		ret = -1;
+		goto out;
+	}
+
+	get_flag_amb_entry();
+	if (amb_test.entry.flag == SWAP_WRITEPAGE_TOBUFFER){
+		printk("SWAP_WRITEPAGE_TOBUFFER");
+		return swap_writepage_tobuffer(page);
+	}
+	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL){
+		// write to swap
+		printk("SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL, skip AMB???");
+		// here we skip the buffer and write to swap ====????
+////		spin_lock(&amb_test.lock);
+////		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+////		spin_unlock(&amb_test.lock);
+//		dst = kmap_atomic(page);
+//		spin_lock(&amb_test.lock);
+//		//dst, src, size
+//		memcpy(dst, reserved_memory+pagedata_handle, pagedata_len);
+//		//reset flag to writebuffer;
+//		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+//
+//		spin_unlock(&amb_test.lock);
+//		kunmap_atomic(dst);
+
+		goto out;
+	}
+	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER){
+		printk("SWAP_READPAGE_FROMBUFFER, skip AMB!");
+//		spin_lock(&amb_test.lock);
+//		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+//		spin_unlock(&amb_test.lock);
+
+//		ret = -1;
+		goto out;
+		//return swap_readpage_frombuffer(page);
+	}
+	else{
+		ret = -1;
+		printk("Unkown swap_rw_ops: %d Err...\n", amb_test.entry.flag);
+		goto out;
+	}
+
+out:
+	return swap_writepage_normal(page, wbc);
+}
+
+static int swap_writepage_tobuffer(struct page *page)
+{
+	unsigned long *src;
+	sector_t sector;
+        int ret = 0;
+
+	if (reserved_memory){
+		sector = (sector_t)__page_file_index(page) << (PAGE_SHIFT - 9);//swap_page_sector(page);
+		src = kmap_atomic(page);
+
+		spin_lock(&amb_test.lock);
+		memcpy(reserved_memory+sector_address_handle, &sector, sector_address_len);
+
+		memcpy(reserved_memory+pagedata_handle, src, pagedata_len);
+		spin_unlock(&amb_test.lock);
+
+		kunmap_atomic(src);
+
+		printk("sector: %ld, page is %lx\n", sector, (long unsigned int)page);
+		//flag just leave it. it still == SWAP_WRITEPAGE_TOBUFFER.
+	}
+
+	return ret;
+}
+
+static void get_flag_amb_entry(void)
+{
+	spin_lock(&amb_test.lock);
+	//dst, src, size
+	memcpy(&amb_test.entry.flag, reserved_memory+flag_handle, flag_len);
+	spin_unlock(&amb_test.lock);
+}
+
+//static void get_pagedata_amb_entry()
+//{
+//	spin_lock(&amb_test->lock);
+//	//dst, src, size
+//	memcpy(&amb_test.entry.mem_test, reserved_memory+pagedata_handle, pagedata_len);
+//	spin_lock(&amb_test->lock);
+//}
+
+static int swap_writepage_normal(struct page *page, struct writeback_control *wbc)
+{
+	int ret = 0;
+	ret = __swap_writepage(page, wbc, end_swap_bio_write);
+	return ret;
+}
+
+
 
 static sector_t swap_page_sector(struct page *page)
 {
@@ -333,6 +569,92 @@ out:
 }
 
 int swap_readpage(struct page *page)
+{
+	if (atomic_read(&modified_hw) == 0){
+		//traditional operations
+		return swap_readpage_normal(page);
+	}
+
+	return swap_readpage_modified(page);
+}
+
+static int swap_readpage_modified(struct page *page)
+{
+	int ret = 0;
+	unsigned long *dst;
+	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
+
+	printk("Modified_HW: amb_memory_address dest = %lx\n", (long unsigned int)reserved_memory);
+
+	if (NULL == reserved_memory) {
+		printk("Get NULL pointer Err...\n");
+		ret = -1;
+		goto out;
+	}
+
+	get_flag_amb_entry();
+	if (amb_test.entry.flag == SWAP_WRITEPAGE_TOBUFFER){
+		//write to buffer
+		printk("SWAP_WRITEPAGE_TOBUFFER, it should not happen!");
+		goto out; //swap_writepage_tobuffer(struct page *page);
+	}
+	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL){
+		struct writeback_control wbc = {
+		        .sync_mode = WB_SYNC_NONE,
+		};
+		// write to swap
+		printk("SWAP_READPAGE_FROMBUFFER_WRITEPAGE_NORMAL, mean compressed mem is full");
+
+		//reset flag
+//		spin_lock(&amb_test.lock);
+//		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+//		spin_unlock(&amb_test.lock);
+		dst = kmap_atomic(page);
+		spin_lock(&amb_test.lock);
+		//dst, src, size
+		memcpy(dst, reserved_memory+pagedata_handle, pagedata_len);
+		//reset flag to writebuffer;
+		memcpy(reserved_memory+flag_handle, &flag, flag_len);
+
+		spin_unlock(&amb_test.lock);
+		kunmap_atomic(dst);
+
+		return swap_writepage_normal(page, &wbc);
+	}
+	else if (amb_test.entry.flag == SWAP_READPAGE_FROMBUFFER){
+		printk("SWAP_READPAGE_FROMBUFFER, mean data found in our compress mem");
+		return swap_readpage_frombuffer(page);
+	}
+	else{
+		printk("Unkown swap_rw_ops: %d Err...\n", amb_test.entry.flag);
+		ret = -1;
+		goto out;
+	}
+
+out:
+	return swap_readpage_normal(page);
+}
+
+static int swap_readpage_frombuffer(struct page *page)
+{
+	unsigned long *dst;
+	//int ret;
+	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
+
+	dst = kmap_atomic(page);
+	spin_lock(&amb_test.lock);
+	//dst, src, size
+	memcpy(dst, reserved_memory+pagedata_handle, pagedata_len);
+	//reset flag to writebuffer;
+	memcpy(reserved_memory+flag_handle, &flag, flag_len);
+
+	spin_unlock(&amb_test.lock);
+	kunmap_atomic(dst);
+
+	return 0;
+}
+
+static int swap_readpage_normal(struct page *page)
 {
 	struct bio *bio;
 	int ret = 0;

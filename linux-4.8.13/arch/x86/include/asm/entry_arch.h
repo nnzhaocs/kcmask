@@ -19,6 +19,7 @@ BUILD_INTERRUPT3(reboot_interrupt, REBOOT_VECTOR, smp_reboot_interrupt)
 #endif
 
 BUILD_INTERRUPT(x86_platform_ipi, X86_PLATFORM_IPI_VECTOR)
+BUILD_INTERRUPT3(acc_service_interrupt, ACC_SERVICE_VECTOR, smp_acc_service_interrupt)
 
 #ifdef CONFIG_HAVE_KVM
 BUILD_INTERRUPT3(kvm_posted_intr_ipi, POSTED_INTR_VECTOR,

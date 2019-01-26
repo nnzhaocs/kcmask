@@ -1005,8 +1005,11 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 		ret = -EINVAL;
 		goto freepage;
 	}
-
+//NANAN: get latency;
+	struct timespec tv_begin,tv_end;
 	/* compress */
+
+	start = current_kernel_time();
 	dst = get_cpu_var(zswap_dstmem);
 	tfm = *get_cpu_ptr(entry->pool->tfm);
 	src = kmap_atomic(page);
@@ -1017,6 +1020,10 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 		ret = -EINVAL;
 		goto put_dstmem;
 	}
+
+	end = current_kernel_time();
+	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
+	printk("Elapse: compress: =>%ld ns", elapse);
 
 	/* store */
 	len = dlen + sizeof(struct zswap_header);
@@ -1075,6 +1082,8 @@ reject:
  * returns 0 if the page was successfully decompressed
  * return -1 on entry not found or error
 */
+
+#include <linux/time.h>
 static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 				struct page *page)
 {
@@ -1084,8 +1093,11 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	u8 *src, *dst;
 	unsigned int dlen;
 	int ret;
+//NANAN: get latency;
+	struct timespec tv_begin,tv_end;
 
 	/* find */
+	start = current_kernel_time();
 	spin_lock(&tree->lock);
 	entry = zswap_entry_find_get(&tree->rbroot, offset);
 	if (!entry) {
@@ -1093,9 +1105,13 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 		spin_unlock(&tree->lock);
 		return -1;
 	}
+	end = current_kernel_time();
+	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
+	printk("Elapse: find: =>%ld ns", elapse);
 	spin_unlock(&tree->lock);
 
 	/* decompress */
+	start = current_kernel_time();
 	dlen = PAGE_SIZE;
 	src = (u8 *)zpool_map_handle(entry->pool->zpool, entry->handle,
 			ZPOOL_MM_RO) + sizeof(struct zswap_header);
@@ -1109,6 +1125,10 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 
 	spin_lock(&tree->lock);
 	zswap_entry_put(tree, entry);
+	end = current_kernel_time();
+	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
+	printk("Elapse: decompress: =>%ld ns", elapse);
+
 	spin_unlock(&tree->lock);
 
 	return 0;

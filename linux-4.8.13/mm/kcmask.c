@@ -67,7 +67,7 @@
 * statistics
 **********************************/
 
-#define RESERVED_MEMORY_OFFSET  0x100000000     /* Offset is 4GB */
+#define RESERVED_MEMORY_OFFSET  0x180000000     /* Offset is 4GB */
 
 extern u8 *reserved_memory;
 extern struct amb_area amb_test;

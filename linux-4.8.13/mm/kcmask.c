@@ -87,19 +87,27 @@ extern u8 flag_handle;
 **********************************/
 extern u8 flag_len;
 extern struct amb_area amb_test;
+// add 0xDEADBEEF to another 8KB buffer
+u16 testing_handle = 8192; //start from 8192
+u16 testing_len = 8192; //len is 8KB
+//#define TESTING_STRING 0xDEADBEEF 
 
 static int __init init_kcmask(void)
 {
 	unsigned int dlen = PAGE_SIZE;
 	enum swap_rw_modified_ops flag = SWAP_WRITEPAGE_TOBUFFER;
-
+	
 	pr_info("start register front swap ops\n");
 
-	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen*2);
+	reserved_memory = ioremap_nocache(RESERVED_MEMORY_OFFSET, dlen*2*2);
 	spin_lock_init(&amb_test.lock);
 
 	amb_test.entry.flag = SWAP_WRITEPAGE_TOBUFFER; //write to buffer
 	memcpy(reserved_memory+flag_handle, &flag, flag_len);
+	memcpy(reserved_memory+testing_handle,"\xDEADBEEF", 4);
+	//for(int i = 0; i < 2047; i++){
+	//	memcpy(reserved_memory+testing_handle+i*4, "\xDEADBEEF", 4);
+	//}
 
     return 0;
 }

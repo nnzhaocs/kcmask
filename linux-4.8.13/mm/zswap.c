@@ -41,6 +41,7 @@
 #include <linux/swapops.h>
 #include <linux/writeback.h>
 #include <linux/pagemap.h>
+#include <linux/time.h>
 
 /*********************************
 * statistics
@@ -1083,7 +1084,7 @@ reject:
  * return -1 on entry not found or error
 */
 
-#include <linux/time.h>
+
 static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 				struct page *page)
 {

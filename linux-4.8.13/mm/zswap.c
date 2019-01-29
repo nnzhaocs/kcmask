@@ -967,6 +967,10 @@ static int zswap_shrink(void)
 static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 				struct page *page)
 {
+	struct timespec _tv_begin,_tv_end;
+	long _elapse, elapse;
+
+	_start = current_kernel_time();
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry, *dupentry;
 	struct crypto_comp *tfm;
@@ -1068,6 +1072,10 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 	atomic_inc(&zswap_stored_pages);
 	zswap_update_total_size();
 
+	_end = current_kernel_time();
+	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
+	printk("Elapse: store: =>%ld ns", _elapse);
+
 	return 0;
 
 put_dstmem:
@@ -1076,6 +1084,10 @@ put_dstmem:
 freepage:
 	zswap_entry_cache_free(entry);
 reject:
+	_end = current_kernel_time();
+	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
+	printk("Elapse: store: =>%ld ns", _elapse);
+
 	return ret;
 }
 
@@ -1084,10 +1096,14 @@ reject:
  * return -1 on entry not found or error
 */
 
-
+//NANNAN: get load latency
 static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 				struct page *page)
 {
+	struct timespec _tv_begin,_tv_end;
+	long _elapse, elapse;
+
+	_start = current_kernel_time();
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry;
 	struct crypto_comp *tfm;
@@ -1131,6 +1147,10 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	printk("Elapse: decompress: =>%ld ns", elapse);
 
 	spin_unlock(&tree->lock);
+
+	_end = current_kernel_time();
+	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
+	printk("Elapse: load: =>%ld ns", _elapse);
 
 	return 0;
 }

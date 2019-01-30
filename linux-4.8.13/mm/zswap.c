@@ -967,7 +967,7 @@ static int zswap_shrink(void)
 static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 				struct page *page)
 {
-	struct timespec _tv_begin,_tv_end;
+	struct timespec _start,_end;
 	long _elapse, elapse;
 
 	_start = current_kernel_time();
@@ -1011,7 +1011,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 		goto freepage;
 	}
 //NANAN: get latency;
-	struct timespec tv_begin,tv_end;
+	struct timespec start,end;
 	/* compress */
 
 	start = current_kernel_time();
@@ -1100,7 +1100,7 @@ reject:
 static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 				struct page *page)
 {
-	struct timespec _tv_begin,_tv_end;
+	struct timespec _start, _end;
 	long _elapse, elapse;
 
 	_start = current_kernel_time();
@@ -1111,7 +1111,7 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	unsigned int dlen;
 	int ret;
 //NANAN: get latency;
-	struct timespec tv_begin,tv_end;
+	struct timespec start, end;
 
 	/* find */
 	start = current_kernel_time();

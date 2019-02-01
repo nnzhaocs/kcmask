@@ -968,7 +968,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 				struct page *page)
 {
 	struct timespec _start,_end;
-	long _elapse, elapse;
+	double _elapse, elapse;
 
 	_start = current_kernel_time();
 	struct zswap_tree *tree = zswap_trees[type];
@@ -1028,7 +1028,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 
 	end = current_kernel_time();
 	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
-	printk("Elapse: compress: =>%ld ns", elapse);
+	printk("Elapse: compress: =>%.1f ns", elapse);
 
 	/* store */
 	len = dlen + sizeof(struct zswap_header);
@@ -1074,7 +1074,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 
 	_end = current_kernel_time();
 	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
-	printk("Elapse: store: =>%ld ns", _elapse);
+	printk("Elapse: store: =>%.1f ns", _elapse);
 
 	return 0;
 
@@ -1086,7 +1086,7 @@ freepage:
 reject:
 	_end = current_kernel_time();
 	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
-	printk("Elapse: store: =>%ld ns", _elapse);
+	printk("Elapse: store: =>%.1f ns", _elapse);
 
 	return ret;
 }
@@ -1101,7 +1101,7 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 				struct page *page)
 {
 	struct timespec _start, _end;
-	long _elapse, elapse;
+	double _elapse, elapse;
 
 	_start = current_kernel_time();
 	struct zswap_tree *tree = zswap_trees[type];
@@ -1124,7 +1124,7 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	}
 	end = current_kernel_time();
 	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
-	printk("Elapse: find: =>%ld ns", elapse);
+	printk("Elapse: find: =>%.1f ns", elapse);
 	spin_unlock(&tree->lock);
 
 	/* decompress */
@@ -1144,13 +1144,13 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	zswap_entry_put(tree, entry);
 	end = current_kernel_time();
 	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
-	printk("Elapse: decompress: =>%ld ns", elapse);
+	printk("Elapse: decompress: =>%.1f ns", elapse);
 
 	spin_unlock(&tree->lock);
 
 	_end = current_kernel_time();
 	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
-	printk("Elapse: load: =>%ld ns", _elapse);
+	printk("Elapse: load: =>%.1f ns", _elapse);
 
 	return 0;
 }

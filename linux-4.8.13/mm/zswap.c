@@ -42,7 +42,8 @@
 #include <linux/writeback.h>
 #include <linux/pagemap.h>
 #include <linux/time.h>
-
+#include <asm/time.h>
+#include <asm/msr.h>
 /*********************************
 * statistics
 **********************************/
@@ -969,8 +970,10 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 {
 	struct timespec _start,_end;
 	long long _elapse, elapse;
-
+        u64 __start, __end, __elapse;
 	_start = current_kernel_time();
+        __start = rdtsc();
+
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry, *dupentry;
 	struct crypto_comp *tfm;
@@ -1012,9 +1015,11 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 	}
 //NANAN: get latency;
 	struct timespec start,end;
+        u64 start_cycle, end_cycle, elapse_cycle;
 	/* compress */
 
 	start = current_kernel_time();
+        start_cycle = rdtsc();
 	dst = get_cpu_var(zswap_dstmem);
 	tfm = *get_cpu_ptr(entry->pool->tfm);
 	src = kmap_atomic(page);
@@ -1027,8 +1032,11 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 	}
 
 	end = current_kernel_time();
+        end_cycle = rdtsc();
 	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
+        elapse_cycle = end_cycle - start_cycle;
 	printk("Elapse: compress: =>%lld ns", elapse);
+	printk("Elapse(cpu cycles): compress: =>%lld cycles", elapse_cycle);
 
 	/* store */
 	len = dlen + sizeof(struct zswap_header);
@@ -1073,8 +1081,11 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 	zswap_update_total_size();
 
 	_end = current_kernel_time();
+	__end = rdtsc();
 	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
-	printk("Elapse: store: =>%lld ns", _elapse);
+	__elapse = __end - __start;
+        printk("Elapse: store: =>%lld ns", _elapse);
+        printk("Elapse: store(cpu cycles): =>%lld cycles", __elapse);
 
 	return 0;
 
@@ -1085,8 +1096,11 @@ freepage:
 	zswap_entry_cache_free(entry);
 reject:
 	_end = current_kernel_time();
+	__end = rdtsc();
 	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
+	__elapse = __end - __start;
 	printk("Elapse: store: =>%lld ns", _elapse);
+        printk("Elapse(reject): store(cpu cycles): =>%lld cycles", __elapse);
 
 	return ret;
 }
@@ -1102,8 +1116,10 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 {
 	struct timespec _start, _end;
 	long long _elapse, elapse;
+        u64 __start, __end, __elapse;
 
 	_start = current_kernel_time();
+        __start = rdtsc();
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry;
 	struct crypto_comp *tfm;
@@ -1112,9 +1128,11 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	int ret;
 //NANAN: get latency;
 	struct timespec start, end;
+        u64 start_cycle, end_cycle, elapse_cycle;
 
 	/* find */
 	start = current_kernel_time();
+        start_cycle = rdtsc();
 	spin_lock(&tree->lock);
 	entry = zswap_entry_find_get(&tree->rbroot, offset);
 	if (!entry) {
@@ -1123,12 +1141,16 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 		return -1;
 	}
 	end = current_kernel_time();
+        end_cycle = rdtsc();
 	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
+        elapse_cycle = end_cycle - start_cycle;
 	printk("Elapse: find: =>%lld ns", elapse);
+	printk("Elapse(cpu cycle)(load): find: =>%lld cycles", elapse_cycle);
 	spin_unlock(&tree->lock);
 
 	/* decompress */
 	start = current_kernel_time();
+        start_cycle = rdtsc();
 	dlen = PAGE_SIZE;
 	src = (u8 *)zpool_map_handle(entry->pool->zpool, entry->handle,
 			ZPOOL_MM_RO) + sizeof(struct zswap_header);
@@ -1142,15 +1164,21 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 
 	spin_lock(&tree->lock);
 	zswap_entry_put(tree, entry);
+        end_cycle = rdtsc();
 	end = current_kernel_time();
+        elapse_cycle = end_cycle - start_cycle;
 	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
 	printk("Elapse: decompress: =>%lld ns", elapse);
+	printk("Elapse(cpu cycle)(load): decompress: =>%lld cycles", elapse_cycle);
 
 	spin_unlock(&tree->lock);
 
 	_end = current_kernel_time();
+        __end = rdtsc();
+        __elapse = __end - __start;
 	_elapse = (_end.tv_sec - _start.tv_sec)*1000000000 + (_end.tv_nsec - _start.tv_nsec);
 	printk("Elapse: load: =>%lld ns", _elapse);
+	printk("Elapse: load(cpu cycle): =>%lld cycles", __elapse);
 
 	return 0;
 }

@@ -1310,17 +1310,17 @@ static int __init zswap_debugfs_init(void)
 	debugfs_create_atomic_t("stored_pages", S_IRUGO,
 			zswap_debugfs_root, &zswap_stored_pages);
 //NANNAN
-	debugfs_create_atomic_t("zswap_cnt_stores", S_IRUGO,
+	debugfs_create_u64("zswap_cnt_stores", S_IRUGO,
 			zswap_debugfs_root, &zswap_cnt_stores);
-	debugfs_create_atomic_t("zswap_cnt_loads", S_IRUGO,
+	debugfs_create_u64("zswap_cnt_loads", S_IRUGO,
 			zswap_debugfs_root, &zswap_cnt_loads);
-	debugfs_create_atomic_t("zswap_cnt_invalidate_pages", S_IRUGO,
+	debugfs_create_u64("zswap_cnt_invalidate_pages", S_IRUGO,
 			zswap_debugfs_root, &zswap_cnt_invalidate_pages);
-	debugfs_create_atomic_t("zswap_cnt_invalidate_areas", S_IRUGO,
+	debugfs_create_u64("zswap_cnt_invalidate_areas", S_IRUGO,
 			zswap_debugfs_root, &zswap_cnt_invalidate_areas);
-	debugfs_create_atomic_t("zswap_compress_cycles", S_IRUGO,
+	debugfs_create_u64("zswap_compress_cycles", S_IRUGO,
 			zswap_debugfs_root, &zswap_compress_cycles);
-	debugfs_create_atomic_t("zswap_decompress_cycles", S_IRUGO,
+	debugfs_create_u64("zswap_decompress_cycles", S_IRUGO,
 			zswap_debugfs_root, &zswap_decompress_cycles);
 
 	return 0;

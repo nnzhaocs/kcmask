@@ -1310,18 +1310,25 @@ static int __init zswap_debugfs_init(void)
 	debugfs_create_atomic_t("stored_pages", S_IRUGO,
 			zswap_debugfs_root, &zswap_stored_pages);
 //NANNAN
+	u64 _zswap_cnt_stores = atomic64_read(&zswap_cnt_stores);
+	u64 _zswap_cnt_loads = atomic64_read(&zswap_cnt_loads);
+	u64 _zswap_cnt_invalidate_pages = atomic64_read(&zswap_cnt_invalidate_pages);
+	u64 _zswap_cnt_invalidate_areas = atomic64_read(&zswap_cnt_invalidate_areas);
+	u64 _zswap_compress_cycles = atomic64_read(&zswap_compress_cycles);
+	u64 _zswap_decompress_cycles = atomic64_read(&zswap_decompress_cycles);
+
 	debugfs_create_u64("zswap_cnt_stores", S_IRUGO,
-			zswap_debugfs_root, &zswap_cnt_stores);
+			zswap_debugfs_root, &_zswap_cnt_stores);
 	debugfs_create_u64("zswap_cnt_loads", S_IRUGO,
-			zswap_debugfs_root, &zswap_cnt_loads);
+			zswap_debugfs_root, &_zswap_cnt_loads);
 	debugfs_create_u64("zswap_cnt_invalidate_pages", S_IRUGO,
-			zswap_debugfs_root, &zswap_cnt_invalidate_pages);
+			zswap_debugfs_root, &_zswap_cnt_invalidate_pages);
 	debugfs_create_u64("zswap_cnt_invalidate_areas", S_IRUGO,
-			zswap_debugfs_root, &zswap_cnt_invalidate_areas);
+			zswap_debugfs_root, &_zswap_cnt_invalidate_areas);
 	debugfs_create_u64("zswap_compress_cycles", S_IRUGO,
-			zswap_debugfs_root, &zswap_compress_cycles);
+			zswap_debugfs_root, &_zswap_compress_cycles);
 	debugfs_create_u64("zswap_decompress_cycles", S_IRUGO,
-			zswap_debugfs_root, &zswap_decompress_cycles);
+			zswap_debugfs_root, &_zswap_decompress_cycles);
 
 	return 0;
 }

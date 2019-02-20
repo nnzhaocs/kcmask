@@ -185,12 +185,12 @@ static bool zswap_init_started;
  * 30s = 126882.06 cycles.
  *********************************/
 
-static atomic_t zswap_cnt_stores = ATOMIC_INIT(0);
-static atomic_t zswap_cnt_loads = ATOMIC_INIT(0);
-static atomic_t zswap_cnt_invalidate_pages = ATOMIC_INIT(0);
-static atomic_t zswap_cnt_invalidate_areas = ATOMIC_INIT(0);
-static atomic_t zswap_compress_cycles = ATOMIC_INIT(0);
-static atomic_t zswap_decompress_cycles = ATOMIC_INIT(0);
+static atomic64_t zswap_cnt_stores = ATOMIC64_INIT(0);
+static atomic64_t zswap_cnt_loads = ATOMIC64_INIT(0);
+static atomic64_t zswap_cnt_invalidate_pages = ATOMIC64_INIT(0);
+static atomic64_t zswap_cnt_invalidate_areas = ATOMIC64_INIT(0);
+static atomic64_t zswap_compress_cycles = ATOMIC64_INIT(0);
+static atomic64_t zswap_decompress_cycles = ATOMIC64_INIT(0);
 
 /*********************************
 * helpers and fwd declarations
@@ -988,7 +988,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 //	_start = current_kernel_time();
 //    __start = rdtsc();
 
-	atomic_inc(&zswap_cnt_stores);
+	atomic64_inc(&zswap_cnt_stores);
 
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry, *dupentry;
@@ -1053,7 +1053,7 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
     elapse_cycle = end_cycle - start_cycle;
 //	printk("Elapse: compress: =>%lld ns", elapse);
 //	printk("Elapse(cpu cycles): compress: =>%lld cycles", elapse_cycle);
-    atomic_add(elapse_cycle, &zswap_compress_cycles);
+    atomic64_add(elapse_cycle, &zswap_compress_cycles);
 
 	/* store */
 	len = dlen + sizeof(struct zswap_header);
@@ -1138,7 +1138,7 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 //	_start = current_kernel_time();
 //        __start = rdtsc();
 
-	atomic_inc(&zswap_cnt_loads);
+	atomic64_inc(&zswap_cnt_loads);
 
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry;
@@ -1190,7 +1190,7 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 //	elapse = (end.tv_sec - start.tv_sec)*1000000000 + (end.tv_nsec - start.tv_nsec);
 //	printk("Elapse: decompress: =>%lld ns", elapse);
 //	printk("Elapse(cpu cycle)(load): decompress: =>%lld cycles", elapse_cycle);
-    atomic_add(elapse_cycle, &zswap_decompress_cycles);
+    atomic64_add(elapse_cycle, &zswap_decompress_cycles);
 
 	spin_unlock(&tree->lock);
 
@@ -1207,7 +1207,7 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 /* frees an entry in zswap */
 static void zswap_frontswap_invalidate_page(unsigned type, pgoff_t offset)
 {
-	atomic_inc(&zswap_cnt_invalidate_pages);
+	atomic64_inc(&zswap_cnt_invalidate_pages);
 
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry;
@@ -1233,7 +1233,7 @@ static void zswap_frontswap_invalidate_page(unsigned type, pgoff_t offset)
 /* frees all zswap entries for the given swap type */
 static void zswap_frontswap_invalidate_area(unsigned type)
 {
-	atomic_inc(&zswap_cnt_invalidate_areas);
+	atomic64_inc(&zswap_cnt_invalidate_areas);
 
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry, *n;

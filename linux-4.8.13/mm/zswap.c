@@ -1004,9 +1004,9 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 //    __start = rdtsc();
 
 //	atomic64_inc(&zswap_cnt_stores);
-	spin_lock(&_zswap_cnt_stores_lock);
-	_zswap_cnt_stores += 1;
-	spin_unlock(&_zswap_cnt_stores_lock);
+//	spin_lock(&_zswap_cnt_stores_lock);
+//	_zswap_cnt_stores += 1;
+//	spin_unlock(&_zswap_cnt_stores_lock);
 
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry, *dupentry;
@@ -1073,7 +1073,8 @@ static int zswap_frontswap_store(unsigned type, pgoff_t offset,
 //	printk("Elapse(cpu cycles): compress: =>%lld cycles", elapse_cycle);
 //    atomic64_add(elapse_cycle, &zswap_compress_cycles);
     spin_lock(&_zswap_compress_cycles_lock);
-    _zswap_compress_cycles += 1;
+    _zswap_compress_cycles += elapse_cycle;
+    _zswap_cnt_stores += 1;
     spin_unlock(&_zswap_compress_cycles_lock);
 
 	/* store */
@@ -1160,9 +1161,9 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 //        __start = rdtsc();
 
 //	atomic64_inc(&zswap_cnt_loads);
-	spin_lock(&_zswap_cnt_loads_lock);
-	_zswap_cnt_loads += 1;
-	spin_unlock(&_zswap_cnt_loads_lock);
+//	spin_lock(&_zswap_cnt_loads_lock);
+//	_zswap_cnt_loads += 1;
+//	spin_unlock(&_zswap_cnt_loads_lock);
 
 	struct zswap_tree *tree = zswap_trees[type];
 	struct zswap_entry *entry;
@@ -1218,7 +1219,8 @@ static int zswap_frontswap_load(unsigned type, pgoff_t offset,
 	spin_unlock(&tree->lock);
 
 	spin_lock(&_zswap_decompress_cycles_lock);
-	_zswap_decompress_cycles += 1;
+	_zswap_decompress_cycles += _zswap_decompress_cycles;
+	_zswap_cnt_loads += 1;
 	spin_unlock(&_zswap_decompress_cycles_lock);
 
 

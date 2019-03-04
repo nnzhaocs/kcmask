@@ -156,7 +156,7 @@ int zcomp_compress(struct zram *zram, struct zcomp_strm *zstrm,
 	end_cycle = rdtsc();
 	elapse_cycle = end_cycle - start_cycle;
 
-    atomic_inc(&zram->stats._zram_cnt_compress);
+    atomic64_inc(&zram->stats._zram_cnt_compress);
     atomic64_add(elapse_cycle, &zram->stats._zram_compress_cycles);
 
     return ret;
@@ -176,7 +176,7 @@ int zcomp_decompress(struct zram *zram, struct zcomp_strm *zstrm,
 	end_cycle = rdtsc();
 	elapse_cycle = end_cycle - start_cycle;
 
-    atomic_inc(&zram->stats._zram_cnt_decompress);
+    atomic64_inc(&zram->stats._zram_cnt_decompress);
     atomic64_add(elapse_cycle, &zram->stats._zram_decompress_cycles);
 
 	return ret;

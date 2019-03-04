@@ -466,6 +466,11 @@ ZRAM_ATTR_RO(notify_free);
 ZRAM_ATTR_RO(zero_pages);
 ZRAM_ATTR_RO(compr_data_size);
 
+ZRAM_ATTR_RO(_zram_cnt_compress);
+ZRAM_ATTR_RO(_zram_cnt_decompress);
+ZRAM_ATTR_RO(_zram_compress_cycles);
+ZRAM_ATTR_RO(_zram_decompress_cycles);
+
 static inline bool zram_meta_get(struct zram *zram)
 {
 	if (atomic_inc_not_zero(&zram->refcount))
@@ -1213,6 +1218,11 @@ static struct attribute *zram_disk_attrs[] = {
 	&dev_attr_io_stat.attr,
 	&dev_attr_mm_stat.attr,
 	&dev_attr_debug_stat.attr,
+	&dev_attr__zram_cnt_compress.attr,
+	&dev_attr__zram_cnt_decompress.attr,
+	&dev_attr__zram_compress_cycles.attr,
+	&dev_attr__zram_decompress_cycles.attr,
+
 	NULL,
 };
 

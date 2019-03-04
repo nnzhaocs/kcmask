@@ -583,7 +583,7 @@ static int zram_decompress_page(struct zram *zram, char *mem, u32 index)
 	} else {
 		struct zcomp_strm *zstrm = zcomp_stream_get(zram->comp);
 
-		ret = zcomp_decompress(zstrm, cmem, size, mem);
+		ret = zcomp_decompress(zram, zstrm, cmem, size, mem);
 		zcomp_stream_put(zram->comp);
 	}
 	zs_unmap_object(meta->mem_pool, handle);
@@ -702,7 +702,7 @@ compress_again:
 	}
 
 	zstrm = zcomp_stream_get(zram->comp);
-	ret = zcomp_compress(zstrm, uncmem, &clen);
+	ret = zcomp_compress(zram, zstrm, uncmem, &clen);
 	if (!is_partial_io(bvec)) {
 		kunmap_atomic(user_mem);
 		user_mem = NULL;

@@ -126,7 +126,7 @@ void zcomp_stream_put(struct zcomp *comp)
 	put_cpu_ptr(comp->stream);
 }
 
-int zcomp_compress(struct zcomp_strm *zstrm,
+int zcomp_compress(struct zram *zram, struct zcomp_strm *zstrm,
 		const void *src, unsigned int *dst_len)
 {
 	/*
@@ -143,21 +143,43 @@ int zcomp_compress(struct zcomp_strm *zstrm,
 	 * the dst buffer, zram_drv will take care of the fact that
 	 * compressed buffer is too big.
 	 */
-	*dst_len = PAGE_SIZE * 2;
 
-	return crypto_comp_compress(zstrm->tfm,
+	//nannan
+	int ret = 0;
+	u64 start_cycle, end_cycle, elapse_cycle;
+	*dst_len = PAGE_SIZE * 2;
+	//nannan
+	start_cycle = rdtsc();
+	ret = crypto_comp_compress(zstrm->tfm,
 			src, PAGE_SIZE,
 			zstrm->buffer, dst_len);
+	end_cycle = rdtsc();
+	elapse_cycle = end_cycle - start_cycle;
+
+    atomic_inc(&zram->stats._zram_cnt_compress);
+    atomic64_add(elapse_cycle, &zram->stats._zram_compress_cycles);
+
+    return ret;
 }
 
-int zcomp_decompress(struct zcomp_strm *zstrm,
+int zcomp_decompress(struct zram *zram, struct zcomp_strm *zstrm,
 		const void *src, unsigned int src_len, void *dst)
 {
 	unsigned int dst_len = PAGE_SIZE;
-
-	return crypto_comp_decompress(zstrm->tfm,
+	int ret;
+	//nannan
+	u64 start_cycle, end_cycle, elapse_cycle;
+	start_cycle = rdtsc();
+	ret = crypto_comp_decompress(zstrm->tfm,
 			src, src_len,
 			dst, &dst_len);
+	end_cycle = rdtsc();
+	elapse_cycle = end_cycle - start_cycle;
+
+    atomic_inc(&zram->stats._zram_cnt_decompress);
+    atomic64_add(elapse_cycle, &zram->stats._zram_decompress_cycles);
+
+	return ret;
 }
 
 static int __zcomp_cpu_notifier(struct zcomp *comp,

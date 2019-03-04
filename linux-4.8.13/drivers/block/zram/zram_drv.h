@@ -87,6 +87,13 @@ struct zram_stats {
 	atomic64_t pages_stored;	/* no. of pages currently stored */
 	atomic_long_t max_used_pages;	/* no. of maximum pages stored */
 	atomic64_t writestall;		/* no. of write slow paths */
+
+	//nannan
+	atomic64_t _zram_cnt_compress;
+	atomic64_t _zram_cnt_decompress;
+	atomic64_t _zram_compress_cycles;
+	atomic64_t _zram_decompress_cycles;
+
 };
 
 struct zram_meta {
